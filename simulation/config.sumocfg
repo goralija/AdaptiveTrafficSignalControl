@@ -1,10 +1,15 @@
 <configuration>
     <input>
-        <net-file value="net/simple_intersection.net.xml"/>
-        <route-files value="routes/traffic.rou.xml"/>
+        <net-file value="network.net.xml"/>
+        <route-files value="routes.rou.xml"/>
     </input>
     <time>
         <begin value="0"/>
         <end value="1000"/>
+        <step-length value="1"/>
     </time>
+    <report>
+        <verbose value="true"/>
+        <no-step-log value="true"/>
+    </report>
 </configuration>
