@@ -5,7 +5,7 @@ import os
 import shutil
 import traci
 from qlearning_agent import QLearningAgent
-from utils import check_sumo_home, get_state
+from utils import check_sumo_home, get_state, generate_random_routes
 from config import TL_ID, PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS
 
 check_sumo_home()
@@ -14,16 +14,19 @@ NUM_EPISODES = 100
 
 agent = QLearningAgent(actions=[0, 1])  # 0: keep, 1: change
 
-# clear the directory 'q-tabele-i-logovi' if it exists
+# clear the directory 'q-tables-and-logs' if it exists
 try:
-    if os.path.exists("q-tabele-i-logovi"):
-        shutil.rmtree("q-tabele-i-logovi")
-    os.makedirs("q-tabele-i-logovi")
+    if os.path.exists("q-tables-and-logs"):
+        shutil.rmtree("q-tables-and-logs")
+    os.makedirs("q-tables-and-logs")
+    os.chdir("q-tables-and-logs")
+    os.makedirs("tables")
+    os.chdir("..")
 except FileExistsError:
     print("Directory already exists, skipping creation.")
 except FileNotFoundError:
     print("Directory not found, creating a new one.")
-    os.makedirs("q-tabele-i-logovi")
+    os.makedirs("q-tables-and-logs")
 except PermissionError:
     print("Permission denied, unable to create directory.")
 except Exception as e:
@@ -31,6 +34,14 @@ except Exception as e:
     
 
 def run_episode(episode):
+    if os.path.exists("../simulation"):
+        os.chdir("../simulation")
+        generate_random_routes()
+        os.chdir("../src")
+    else:
+        print("Directory '../simulation' does not exist, please check the path.")
+        return
+        
     traci.start([SUMO_BINARY, "-c", CONFIG_FILE])
     step = 0
     last_action_time = 0
@@ -43,7 +54,7 @@ def run_episode(episode):
         step += 1
 
         current_phase = traci.trafficlight.getPhase(TL_ID)
-        print(f"Step {step} - Current phase: {current_phase}")
+        #print(f"Step {step} - Current phase: {current_phase}")
 
         if current_phase == -1:
             # Semafor nije spreman, ne menjaj fazu i samo nastavi
@@ -55,7 +66,7 @@ def run_episode(episode):
                 current_phase = traci.trafficlight.getPhase(TL_ID)
                 if current_phase >= 0:
                     new_phase = (current_phase + 1) % 4  # koristi broj faza iz tvoje mreže
-                    print(f"Changing phase from {current_phase} to {new_phase}")
+                    print(f"Changing phase from {current_phase} to {new_phase} in step {step}")
                     traci.trafficlight.setPhase(TL_ID, new_phase)
                 else:
                     print(f"Warning: Current phase is {current_phase}, skipping phase change.")
@@ -78,9 +89,13 @@ for ep in range(NUM_EPISODES):
     print(f"Starting episode {ep}")
     reward = run_episode(ep)
 
-    with open(f"q-tabele-i-logovi/qtable_ep{ep}.pkl", "wb") as f:
+    with open(f"q-tables-and-logs/tables/qtable_ep{ep}.pkl", "wb") as f:
         pickle.dump(agent.q_table, f)
+    
+    if ep == NUM_EPISODES - 1:
+        with open("q-tables-and-logs/qtable_final.pkl", "wb") as f:
+            pickle.dump(agent.q_table, f)
 
-    with open("q-tabele-i-logovi/log.csv", "a") as log_file:
+    with open("q-tables-and-logs/log.csv", "a") as log_file:
         log_file.write(f"{ep},{reward}\n")
     print(f"Episode {ep} total reward: {reward}\n")

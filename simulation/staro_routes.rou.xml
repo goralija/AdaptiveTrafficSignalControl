@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="car" accel="2.6" decel="4.5" sigma="0.5" length="5" maxSpeed="13.9" guiShape="passenger"/>
+    
+    <route id="r1" edges="e0 e1"/>
+    <route id="r2" edges="e4 e5"/>
+    <route id="r3" edges="e6 e7"/>
+    <route id="r4" edges="e2 e3"/>
+    
+    <!-- Vozila koja kreću iz različitih pravaca -->
+    <flow id="flow_r1" type="car" route="r1" begin="0" end="100" vehsPerHour="1400"/>
+    <flow id="flow_r2" type="car" route="r2" begin="0" end="100" vehsPerHour="500"/>
+    <flow id="flow_r3" type="car" route="r3" begin="0" end="100" vehsPerHour="1100"/>
+    <flow id="flow_r4" type="car" route="r4" begin="0" end="100" vehsPerHour="700"/>
+</routes>
