@@ -1,21 +1,34 @@
 # run_training.py
 import time
 import pickle
+import os
+import shutil
 import traci
 from qlearning_agent import QLearningAgent
-from utils import check_sumo_home
-from simulation_utils import get_state
+from utils import check_sumo_home, get_state
+from config import TL_ID, PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS
 
 check_sumo_home()
 
-SUMO_BINARY = "sumo"
-CONFIG_FILE = "simulation/config.sumocfg"
-TL_ID = "n0"
-PHASE_DURATION = 10
-MAX_STEPS = 1000
 NUM_EPISODES = 100
 
 agent = QLearningAgent(actions=[0, 1])  # 0: keep, 1: change
+
+# clear the directory 'q-tabele-i-logovi' if it exists
+try:
+    if os.path.exists("q-tabele-i-logovi"):
+        shutil.rmtree("q-tabele-i-logovi")
+    os.makedirs("q-tabele-i-logovi")
+except FileExistsError:
+    print("Directory already exists, skipping creation.")
+except FileNotFoundError:
+    print("Directory not found, creating a new one.")
+    os.makedirs("q-tabele-i-logovi")
+except PermissionError:
+    print("Permission denied, unable to create directory.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
+    
 
 def run_episode(episode):
     traci.start([SUMO_BINARY, "-c", CONFIG_FILE])
@@ -60,17 +73,14 @@ def run_episode(episode):
     traci.close()
     return total_reward
 
-
-
-
 # Main training loop
 for ep in range(NUM_EPISODES):
     print(f"Starting episode {ep}")
     reward = run_episode(ep)
 
-    with open(f"qtable_ep{ep}.pkl", "wb") as f:
+    with open(f"q-tabele-i-logovi/qtable_ep{ep}.pkl", "wb") as f:
         pickle.dump(agent.q_table, f)
 
-    with open("log.csv", "a") as log_file:
+    with open("q-tabele-i-logovi/log.csv", "a") as log_file:
         log_file.write(f"{ep},{reward}\n")
     print(f"Episode {ep} total reward: {reward}\n")

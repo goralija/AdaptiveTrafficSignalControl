@@ -2,15 +2,10 @@
 import pickle
 import traci
 from qlearning_agent import QLearningAgent
-from utils import check_sumo_home
-from simulation_utils import get_state
+from utils import check_sumo_home, get_state
+from config import TL_ID, PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS
 
 check_sumo_home()
-
-TL_ID = "n0"
-PHASE_DURATION = 10
-MAX_STEPS = 1000
-CONFIG_FILE = "simulation/config.sumocfg"
 
 # Load learned Q-table
 with open('qtable_ep99.pkl', 'rb') as f:
@@ -19,7 +14,7 @@ with open('qtable_ep99.pkl', 'rb') as f:
 agent = QLearningAgent(actions=[0, 1])
 agent.q_table = q_table
 
-traci.start(["sumo-gui", "-c", CONFIG_FILE])
+traci.start([SUMO_BINARY, "-c", CONFIG_FILE])
 step = 0
 last_action_time = 0
 
