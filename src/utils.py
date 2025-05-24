@@ -2,6 +2,7 @@ import os
 import sys
 import traci
 import subprocess
+from config import TL_ID, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS
 
 def check_sumo_home():
     if 'SUMO_HOME' in os.environ:
@@ -28,3 +29,7 @@ def generate_random_routes():
         "-p", "1",
         "--validate"
     ])
+
+def get_phase_count():
+    num_phases = traci.trafficlight.getAllProgramLogics(TL_ID)[0].getPhases()
+    return len(num_phases)

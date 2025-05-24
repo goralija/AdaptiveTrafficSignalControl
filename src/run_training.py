@@ -5,14 +5,14 @@ import os
 import shutil
 import traci
 from qlearning_agent import QLearningAgent
-from utils import check_sumo_home, get_state, generate_random_routes
+from utils import check_sumo_home, get_state, generate_random_routes, get_phase_count
 from config import TL_ID, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS, NUM_EPISODES
 
 check_sumo_home()
 
 agent = QLearningAgent(actions=[0, 1])  # 0: keep, 1: change
 
-# clear the directory 'q-tables-and-logs' if it exists
+# preparing the directory for Q-tables and logs
 try:
     if os.path.exists("q-tables-and-logs"):
         shutil.rmtree("q-tables-and-logs")
@@ -30,7 +30,6 @@ except PermissionError:
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
     
-
 def run_episode(episode):
     if os.path.exists("../simulation"):
         os.chdir("../simulation")
@@ -66,7 +65,7 @@ def run_episode(episode):
             if action == 1:
                 current_phase = traci.trafficlight.getPhase(TL_ID)
                 if current_phase >= 0:
-                    new_phase = (current_phase + 1) % 4  # koristi broj faza iz tvoje mreže
+                    new_phase = (current_phase + 1) % get_phase_count()  # koristi broj faza iz tvoje mreže
                     print(f"Changing phase from {current_phase} to {new_phase} in step {step}")
                     traci.trafficlight.setPhase(TL_ID, new_phase)
                 else:
@@ -91,7 +90,7 @@ for ep in range(NUM_EPISODES):
     reward = run_episode(ep)
 
     # save the Q-table after every tenth episode
-    if ep+1 % 10 == 0:
+    if (ep+1) % 10 == 0:
         with open(f"q-tables-and-logs/tables/qtable_ep{ep}.pkl", "wb") as f:
             pickle.dump(agent.q_table, f)
     

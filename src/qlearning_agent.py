@@ -1,7 +1,8 @@
 import random
+from config import ALPHA, GAMMA, EPSILON
 
 class QLearningAgent:
-    def __init__(self, actions, alpha=0.1, gamma=0.9, epsilon=0.1):
+    def __init__(self, actions, alpha=ALPHA, gamma=GAMMA, epsilon=EPSILON):
         self.q_table = {}  # key: (state, action), value: Q-value
         self.alpha = alpha
         self.gamma = gamma
