@@ -6,11 +6,9 @@ import shutil
 import traci
 from qlearning_agent import QLearningAgent
 from utils import check_sumo_home, get_state, generate_random_routes
-from config import TL_ID, PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS
+from config import TL_ID, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS, NUM_EPISODES
 
 check_sumo_home()
-
-NUM_EPISODES = 100
 
 agent = QLearningAgent(actions=[0, 1])  # 0: keep, 1: change
 
@@ -60,8 +58,11 @@ def run_episode(episode):
             # Semafor nije spreman, ne menjaj fazu i samo nastavi
             continue
 
-        if step - last_action_time >= PHASE_DURATION:
-            action = agent.choose_action(state)
+        if step - last_action_time >= MIN_PHASE_DURATION:
+            if step - last_action_time >= MAX_PHASE_DURATION:
+                action = 1
+            else:
+                action = agent.choose_action(state)
             if action == 1:
                 current_phase = traci.trafficlight.getPhase(TL_ID)
                 if current_phase >= 0:
@@ -70,7 +71,7 @@ def run_episode(episode):
                     traci.trafficlight.setPhase(TL_ID, new_phase)
                 else:
                     print(f"Warning: Current phase is {current_phase}, skipping phase change.")
-            last_action_time = step
+                last_action_time = step
         else:
             action = 0
 
@@ -89,8 +90,10 @@ for ep in range(NUM_EPISODES):
     print(f"Starting episode {ep}")
     reward = run_episode(ep)
 
-    with open(f"q-tables-and-logs/tables/qtable_ep{ep}.pkl", "wb") as f:
-        pickle.dump(agent.q_table, f)
+    # save the Q-table after every tenth episode
+    if ep+1 % 10 == 0:
+        with open(f"q-tables-and-logs/tables/qtable_ep{ep}.pkl", "wb") as f:
+            pickle.dump(agent.q_table, f)
     
     if ep == NUM_EPISODES - 1:
         with open("q-tables-and-logs/qtable_final.pkl", "wb") as f:

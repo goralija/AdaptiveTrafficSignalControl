@@ -3,7 +3,7 @@ import pickle
 import traci
 from qlearning_agent import QLearningAgent
 from utils import check_sumo_home, get_state
-from config import TL_ID, PHASE_DURATION, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS
+from config import TL_ID, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS
 
 check_sumo_home()
 
@@ -23,18 +23,19 @@ while step < MAX_STEPS:
     step += 1
 
     state = get_state()
-    if step - last_action_time >= PHASE_DURATION:
-        action = agent.choose_action(state)
+    if step - last_action_time >= MIN_PHASE_DURATION:
+        if step - last_action_time >= MAX_PHASE_DURATION:
+            action = 1
+        else:
+            action = agent.choose_action(state)
         if action == 1:
-            if action == 1:
-                current_phase = traci.trafficlight.getPhase(TL_ID)
-                if current_phase >= 0:
-                    new_phase = (current_phase + 1) % 4  # koristi broj faza iz tvoje mreže
-                    print(f"Changing phase from {current_phase} to {new_phase}")
-                    traci.trafficlight.setPhase(TL_ID, new_phase)
-                else:
-                    print(f"Warning: Current phase is {current_phase}, skipping phase change.")
+            current_phase = traci.trafficlight.getPhase(TL_ID)
+            if current_phase >= 0:
+                new_phase = (current_phase + 1) % 4  # koristi broj faza iz tvoje mreže
+                print(f"Changing phase from {current_phase} to {new_phase}")
+                traci.trafficlight.setPhase(TL_ID, new_phase)
+            else:
+                print(f"Warning: Current phase is {current_phase}, skipping phase change.")
             last_action_time = step
-        last_action_time = step
 
 traci.close()
