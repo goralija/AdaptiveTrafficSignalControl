@@ -21,7 +21,8 @@ FIXED_CYCLE = [20, 30, 20, 30]  # Phase durations in steps (adjust based on your
 
 def run_simulation(use_rl_agent=True, episode=0):
     # Generate random routes for this evaluation episode
-    generate_random_routes(episode=episode)  # Modified to include episode-specific routes
+    seed = episode % NUM_EVAL_EPISODES + 23
+    generate_random_routes(seed=seed)  # Modified to include episode-specific routes
     
     traci.start([SUMO_BINARY_EVAL if use_rl_agent else SUMO_BINARY, "-c", CONFIG_FILE])
     step = 0

@@ -5,7 +5,10 @@ import shutil
 import traci
 from qlearning_agent import QLearningAgent
 from utils import check_sumo_home, get_state, generate_random_routes, get_phase_count, update_config
-from config import TL_ID, NUM_ROUTE_VARIATIONS, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON
+from config import (
+    TL_ID, NUM_ROUTE_VARIATIONS, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, 
+    SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON
+)
 
 check_sumo_home()
 

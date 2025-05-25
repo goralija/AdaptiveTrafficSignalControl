@@ -1,3 +1,3 @@
 # AdaptiveTrafficSignalControl
 
-- napravi evaluacija u vidu usporedbe RL i fiksnih intervala
+- dovrsiti usporedbu fiksnih intervala i RL

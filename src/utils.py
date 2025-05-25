@@ -2,7 +2,11 @@ import os
 import sys
 import traci
 import subprocess
-from config import TL_ID, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS, NUM_EPISODES, NUM_ROUTE_VARIATIONS, ALPHA, GAMMA, EPSILON, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON, MIN_PHASE_DURATION, MAX_PHASE_DURATION, SUMO_BINARY
+from config import (
+    TL_ID, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS, NUM_EPISODES, NUM_ROUTE_VARIATIONS, 
+    ALPHA, GAMMA, EPSILON, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON, MIN_PHASE_DURATION, 
+    MAX_PHASE_DURATION, SUMO_BINARY, NUM_EVAL_EPISODES
+)
 
 def check_sumo_home():
     if 'SUMO_HOME' in os.environ:
@@ -56,6 +60,7 @@ def update_config(
     last_epsilon=LAST_EPSILON,
     max_steps=MAX_STEPS,
     num_episodes=NUM_EPISODES,    
+    num_eval_episodes=NUM_EVAL_EPISODES,
     num_route_variations=NUM_ROUTE_VARIATIONS
     ):
     with open("./config.py", "w") as config_file:
@@ -67,6 +72,7 @@ def update_config(
         config_file.write(f"""SUMO_BINARY_EVAL = "{sumo_binary_eval}"\n""")
         config_file.write(f"""MAX_STEPS = {max_steps}\n""")
         config_file.write(f"""NUM_EPISODES = {num_episodes}\n""")
+        config_file.write(f"""NUM_EVAL_EPISODES = {num_eval_episodes}\n""")
         config_file.write(f"""NUM_ROUTE_VARIATIONS = {num_route_variations}\n""")
         config_file.write(f"""ALPHA = {alpha}\n""")
         config_file.write(f"""GAMMA = {gamma}\n""")
