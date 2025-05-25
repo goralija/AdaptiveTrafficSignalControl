@@ -1,17 +1,23 @@
 # run_training.py
-import time
 import pickle
 import os
 import shutil
 import traci
 from qlearning_agent import QLearningAgent
-from utils import check_sumo_home, get_state, generate_random_routes, get_phase_count
-from config import TL_ID, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS, NUM_EPISODES
+from utils import check_sumo_home, get_state, generate_random_routes, get_phase_count, update_config
+from config import TL_ID, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON
 
 check_sumo_home()
 
-agent = QLearningAgent(actions=[0, 1])  # 0: keep, 1: change
-
+if os.path.exists(Q_TABLE_PATH):
+    with open(Q_TABLE_PATH, "rb") as f:
+        loaded_q_table = pickle.load(f)
+    print("Učitana postojeća Q-tabela!")
+    agent = QLearningAgent(actions=[0, 1], alpha=LAST_ALPHA, gamma=LAST_GAMMA, epsilon=LAST_EPSILON)  # Koristi posljednje vrijednosti alpha, gamma i epsilon
+    agent.q_table = loaded_q_table  # Koristi postojeću tabelu
+else:
+    agent = QLearningAgent(actions=[0, 1])  # Kreiraj novog agenta
+    print("Nema postojeće Q-tabele, kreiran novi agent!")
 # preparing the directory for Q-tables and logs
 try:
     if os.path.exists("q-tables-and-logs"):
@@ -86,6 +92,10 @@ def run_episode(episode):
 
 # Main training loop
 for ep in range(NUM_EPISODES):
+    # adjust hyperparameters for each episode
+    agent.epsilon = 0.1 * (0.99 ** ep)
+    agent.alpha = 0.1 / (1 + ep * 0.001)
+    
     print(f"Starting episode {ep}")
     reward = run_episode(ep)
 
@@ -101,3 +111,7 @@ for ep in range(NUM_EPISODES):
     with open("q-tables-and-logs/log.csv", "a") as log_file:
         log_file.write(f"{ep},{reward}\n")
     print(f"Episode {ep} total reward: {reward}\n")
+    
+    print (agent.alpha, agent.gamma, agent.epsilon)
+    # change hyperparameters in config.py for the next training run
+    update_config(last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon)

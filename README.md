@@ -5,4 +5,4 @@ za dalje treba da se
 - sredi trening na nacin da se napravi seed i da se vrtimo kroz samo n simulacija
 - napravi epsilon decay
 - da se skalira reward
-- do-treniranje agenta uz pomoc ucitane q-table i hyperparameter decay
+- napraviti ucitavanje q-tabele za do-treniranje
