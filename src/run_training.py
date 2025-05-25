@@ -5,7 +5,7 @@ import shutil
 import traci
 from qlearning_agent import QLearningAgent
 from utils import check_sumo_home, get_state, generate_random_routes, get_phase_count, update_config
-from config import TL_ID, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON
+from config import TL_ID, NUM_ROUTE_VARIATIONS, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON
 
 check_sumo_home()
 
@@ -39,7 +39,8 @@ except Exception as e:
 def run_episode(episode):
     if os.path.exists("../simulation"):
         os.chdir("../simulation")
-        generate_random_routes()
+        seed = episode % NUM_ROUTE_VARIATIONS
+        generate_random_routes(seed=seed)
         os.chdir("../src")
     else:
         print("Directory '../simulation' does not exist, please check the path.")
@@ -93,14 +94,14 @@ def run_episode(episode):
 # Main training loop
 for ep in range(NUM_EPISODES):
     # adjust hyperparameters for each episode
-    agent.epsilon = 0.1 * (0.99 ** ep)
+    agent.epsilon = 0.1 * (0.97 ** ep)
     agent.alpha = 0.1 / (1 + ep * 0.001)
     
     print(f"Starting episode {ep}")
     reward = run_episode(ep)
 
-    # save the Q-table after every tenth episode
-    if (ep+1) % 10 == 0:
+    # save the Q-table after every nth episode
+    if (ep+1) % NUM_ROUTE_VARIATIONS == 0:
         with open(f"q-tables-and-logs/tables/qtable_ep{ep}.pkl", "wb") as f:
             pickle.dump(agent.q_table, f)
     
