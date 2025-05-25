@@ -1,5 +1,7 @@
 # run_training.py
 import pickle
+import pandas as pd
+import matplotlib.pyplot as plt
 import os
 import shutil
 import traci
@@ -119,3 +121,20 @@ for ep in range(NUM_EPISODES):
     print (agent.alpha, agent.gamma, agent.epsilon)
     # change hyperparameters in config.py for the next training run
     update_config(last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon)
+    
+os.chdir("./q-tables-and-logs/")
+df = pd.read_csv("log.csv", header=None)
+
+# Extract columns
+x = df[0]  # First column
+y = -df[1]  # Negated second column
+
+# Plot
+plt.plot(x, y, marker='o')
+plt.xlabel("Episode")
+plt.ylabel("Negative Total Reward")
+plt.title("Training Progress (Lower is Better)")
+plt.grid(True)
+plt.tight_layout()
+plt.savefig("training_progress.png")
+os.chdir("..")
