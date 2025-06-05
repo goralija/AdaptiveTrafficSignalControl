@@ -3,7 +3,7 @@ import sys
 import traci
 import subprocess
 from config import (
-    TL_ID, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS, NUM_EPISODES, NUM_ROUTE_VARIATIONS, 
+    NET_FILE, ROU_FILE, SIMULATION_FOLDER, TL_ID, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS, NUM_EPISODES, NUM_ROUTE_VARIATIONS, 
     ALPHA, GAMMA, EPSILON, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON, MIN_PHASE_DURATION, 
     MAX_PHASE_DURATION, SUMO_BINARY, NUM_EVAL_EPISODES
 )
@@ -15,7 +15,17 @@ def check_sumo_home():
     else:
         raise EnvironmentError("SUMO_HOME environment variable not set. Please add it to your shell config.")
 
-def get_state():
+def get_state(tls_id=TL_ID):
+    # Get controlled lanes of the traffic light (e.g., "0", "1", etc.)
+    lanes = traci.trafficlight.getControlledLanes(tls_id)
+    # Keep unique lanes only
+    lanes = list(set(lanes))
+    # Get number of vehicles on each lane
+    queue_lengths = [traci.lane.getLastStepVehicleNumber(lane) for lane in lanes]
+    # Return state as a tuple (can also return as np.array if needed)
+    return tuple(queue_lengths)
+
+def get_state_staro():
     q_north = traci.lane.getLastStepVehicleNumber("e2_0")
     q_south = traci.lane.getLastStepVehicleNumber("e4_0")
     q_east  = traci.lane.getLastStepVehicleNumber("e6_0")
@@ -26,8 +36,8 @@ def generate_random_routes(seed=None):
     command = [
         "python", 
         f"{os.environ['SUMO_HOME']}/tools/randomTrips.py",
-        "-n", "network.net.xml",
-        "-r", "routes.rou.xml",
+        "-n", f"{NET_FILE}",
+        "-r", f"{ROU_FILE}",
         "-b", "0",
         "-e", "100",
         "-p", "1",
@@ -61,13 +71,19 @@ def update_config(
     max_steps=MAX_STEPS,
     num_episodes=NUM_EPISODES,    
     num_eval_episodes=NUM_EVAL_EPISODES,
-    num_route_variations=NUM_ROUTE_VARIATIONS
+    num_route_variations=NUM_ROUTE_VARIATIONS,
+    simulation_folder=SIMULATION_FOLDER,
+    net_file=NET_FILE,
+    rou_file=ROU_FILE
     ):
     with open("./config.py", "w") as config_file:
         config_file.write(f"""TL_ID = "{tl_id}"\n""")
         config_file.write(f"""MIN_PHASE_DURATION = {min_phase_duration}\n""")
         config_file.write(f"""MAX_PHASE_DURATION = {max_phase_duration}\n""")
         config_file.write(f"""CONFIG_FILE = "{sim_config_file}"\n""")
+        config_file.write(f"""SIMULATION_FOLDER = "{simulation_folder}"\n""")
+        config_file.write(f"""NET_FILE = "{net_file}"\n""")
+        config_file.write(f"""ROU_FILE = "{rou_file}"\n""")
         config_file.write(f"""SUMO_BINARY = "{sumo_binary}"\n""")
         config_file.write(f"""SUMO_BINARY_EVAL = "{sumo_binary_eval}"\n""")
         config_file.write(f"""MAX_STEPS = {max_steps}\n""")

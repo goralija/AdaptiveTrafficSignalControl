@@ -9,7 +9,8 @@ from qlearning_agent import QLearningAgent
 from utils import check_sumo_home, get_state, generate_random_routes, get_phase_count, update_config
 from config import (
     TL_ID, NUM_ROUTE_VARIATIONS, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, 
-    SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON
+    SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON,
+    SIMULATION_FOLDER
 )
 
 check_sumo_home()
@@ -41,14 +42,14 @@ except PermissionError:
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
     
-def run_episode(episode):
-    if os.path.exists("../simulation"):
-        os.chdir("../simulation")
+def run_episode(episode, sim_folder=SIMULATION_FOLDER):
+    if os.path.exists(sim_folder):
+        os.chdir(sim_folder)
         seed = episode % NUM_ROUTE_VARIATIONS
         generate_random_routes(seed=seed)
         os.chdir("../src")
     else:
-        print("Directory '../simulation' does not exist, please check the path.")
+        print(f"Directory '{sim_folder}' does not exist, please check the path.")
         return
         
     traci.start([SUMO_BINARY, "-c", CONFIG_FILE])
