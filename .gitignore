@@ -21,3 +21,4 @@ src/q-tables-and-logs/
 *.env.local
 *.env.development
 *.env.test
+*copy.py

@@ -1,2 +1,3 @@
 # AdaptiveTrafficSignalControl
-- popraviti generalizovanje skripti za raskrsnicu otoka
+- dodati opciju da se moze kroz neki parametar zadati zasicenje saobracaja
+    umjesto da to ide 'random'

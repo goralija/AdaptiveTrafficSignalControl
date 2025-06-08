@@ -41,13 +41,10 @@ def check_sumo_home():
         raise EnvironmentError("SUMO_HOME environment variable not set. Please add it to your shell config.")
 
 def get_state(tls_id=TL_ID):
-    # Get controlled lanes of the traffic light (e.g., "0", "1", etc.)
     lanes = traci.trafficlight.getControlledLanes(tls_id)
     # Keep unique lanes only
     lanes = list(set(lanes))
-    # Get number of vehicles on each lane
     queue_lengths = [traci.lane.getLastStepVehicleNumber(lane) for lane in lanes]
-    # Return state as a tuple (can also return as np.array if needed)
     return tuple(queue_lengths)
 
 def get_state_staro():
