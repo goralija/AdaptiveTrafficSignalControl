@@ -6,7 +6,7 @@ import subprocess
 from config import (
     NET_FILE, ROU_FILE, SIMULATION_FOLDER, TL_ID, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS, NUM_EPISODES, NUM_ROUTE_VARIATIONS, 
     ALPHA, GAMMA, EPSILON, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON, MIN_PHASE_DURATION, 
-    MAX_PHASE_DURATION, SUMO_BINARY, NUM_EVAL_EPISODES
+    MAX_PHASE_DURATION, SUMO_BINARY, NUM_EVAL_EPISODES, ALPHA_DECAY, EPSILON_DECAY
 )
 
 class QLearningAgent:
@@ -87,6 +87,8 @@ def update_config(
     alpha=ALPHA,
     gamma=GAMMA,
     epsilon=EPSILON,
+    alpha_decay=ALPHA_DECAY,
+    epsilon_decay=EPSILON_DECAY,
     min_phase_duration=MIN_PHASE_DURATION,
     max_phase_duration=MAX_PHASE_DURATION,
     q_table_path=Q_TABLE_PATH,
@@ -118,6 +120,8 @@ def update_config(
         config_file.write(f"""ALPHA = {alpha}\n""")
         config_file.write(f"""GAMMA = {gamma}\n""")
         config_file.write(f"""EPSILON = {epsilon}\n""")
+        config_file.write(f"""ALPHA_DECAY = {alpha_decay}\n""")
+        config_file.write(f"""EPSILON_DECAY = {epsilon_decay}\n""")
         config_file.write(f"""Q_TABLE_PATH = "{q_table_path}"\n""")
         config_file.write(f"""LAST_ALPHA = {last_alpha}\n""")
         config_file.write(f"""LAST_GAMMA = {last_gamma}\n""")

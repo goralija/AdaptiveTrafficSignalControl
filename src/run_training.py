@@ -7,7 +7,7 @@ import shutil
 import traci
 from utils import QLearningAgent, check_sumo_home, get_state, generate_random_routes, get_phase_count, update_config
 from config import (
-    TL_ID, NUM_ROUTE_VARIATIONS, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, 
+    ALPHA_DECAY, EPSILON_DECAY, TL_ID, NUM_ROUTE_VARIATIONS, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, 
     SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON,
     SIMULATION_FOLDER
 )
@@ -99,8 +99,8 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
 # Main training loop
 for ep in range(NUM_EPISODES):
     # adjust hyperparameters for each episode
-    agent.epsilon = 0.1 * (0.97 ** ep)
-    agent.alpha = 0.1 / (1 + ep * 0.001)
+    agent.epsilon *= EPSILON_DECAY
+    agent.alpha *= ALPHA_DECAY
     
     print(f"Starting episode {ep}")
     reward = run_episode(ep)
