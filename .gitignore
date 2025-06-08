@@ -22,3 +22,5 @@ src/q-tables-and-logs/
 *.env.development
 *.env.test
 *copy.py
+*.rou.xml
+*.trips.xml

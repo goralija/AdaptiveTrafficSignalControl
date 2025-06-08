@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2025-06-08 16:06:16.460284 by randomTrips.py UNKNOWN
+<!-- generated on 2025-06-08 16:29:14.347111 by randomTrips.py UNKNOWN
 <configuration>
     <net-file value="osm.net.xml"/>
     <route-file value="routes.rou.xml"/>
@@ -11,7 +11,7 @@
 </configuration>
 -->
 
-<!-- generated on 2025-06-08 16:06:16 by Eclipse SUMO duarouter Version 1.20.0
+<!-- generated on 2025-06-08 16:29:14 by Eclipse SUMO duarouter Version 1.20.0
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/duarouterConfiguration.xsd">
 
     <input>

@@ -145,8 +145,14 @@ for ep in range(NUM_EPISODES):
         if os.path.exists("evaluation-results"):
             shutil.rmtree("evaluation-results")
         os.makedirs("evaluation-results")
+        with open(
+            "evaluation-results/evaluation_results.csv", "w"
+        ) as eval_file:
+            eval_file.write("Fixed,Agent\n")
 
     with open("q-tables-and-logs/log.csv", "a") as log_file:
+        if ep == 0:
+            log_file.write("Episode,Total Reward\n")
         log_file.write(f"{ep},{reward}\n")
     print(f"Episode {ep} total reward: {reward}\n")
 
