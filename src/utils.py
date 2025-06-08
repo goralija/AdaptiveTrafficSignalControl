@@ -4,10 +4,33 @@ import sys
 import traci
 import subprocess
 from config import (
-    NET_FILE, ROU_FILE, SIMULATION_FOLDER, TL_ID, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS, NUM_EPISODES, NUM_ROUTE_VARIATIONS, 
-    ALPHA, GAMMA, EPSILON, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON, MIN_PHASE_DURATION, 
-    MAX_PHASE_DURATION, SUMO_BINARY, NUM_EVAL_EPISODES, ALPHA_DECAY, EPSILON_DECAY
+    NET_FILE,
+    ROU_FILE,
+    SIMULATION_FOLDER,
+    TL_ID,
+    CONFIG_FILE,
+    SUMO_BINARY_EVAL,
+    MAX_STEPS,
+    NUM_EPISODES,
+    NUM_ROUTE_VARIATIONS,
+    ALPHA,
+    GAMMA,
+    EPSILON,
+    Q_TABLE_PATH,
+    LAST_ALPHA,
+    LAST_GAMMA,
+    LAST_EPSILON,
+    MIN_PHASE_DURATION,
+    MAX_PHASE_DURATION,
+    SUMO_BINARY,
+    NUM_EVAL_EPISODES,
+    ALPHA_DECAY,
+    EPSILON_DECAY,
+    ROUTES_PER_SEC,
+    SIM_START_OF_GENERATING,
+    SIM_END_OF_GENERATING,
 )
+
 
 class QLearningAgent:
     def __init__(self, actions, alpha=ALPHA, gamma=GAMMA, epsilon=EPSILON):
@@ -30,15 +53,21 @@ class QLearningAgent:
     def learn(self, state, action, reward, next_state):
         current_q = self.get_Q(state, action)
         max_future_q = max([self.get_Q(next_state, a) for a in self.actions])
-        new_q = current_q + self.alpha * (reward + self.gamma * max_future_q - current_q)
+        new_q = current_q + self.alpha * (
+            reward + self.gamma * max_future_q - current_q
+        )
         self.q_table[(state, action)] = new_q
 
+
 def check_sumo_home():
-    if 'SUMO_HOME' in os.environ:
-        tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
+    if "SUMO_HOME" in os.environ:
+        tools = os.path.join(os.environ["SUMO_HOME"], "tools")
         sys.path.append(tools)
     else:
-        raise EnvironmentError("SUMO_HOME environment variable not set. Please add it to your shell config.")
+        raise EnvironmentError(
+            "SUMO_HOME environment variable not set. Please add it to your shell config."
+        )
+
 
 def get_state(tls_id=TL_ID):
     lanes = traci.trafficlight.getControlledLanes(tls_id)
@@ -47,34 +76,43 @@ def get_state(tls_id=TL_ID):
     queue_lengths = [traci.lane.getLastStepVehicleNumber(lane) for lane in lanes]
     return tuple(queue_lengths)
 
+
 def get_state_staro():
     q_north = traci.lane.getLastStepVehicleNumber("e2_0")
     q_south = traci.lane.getLastStepVehicleNumber("e4_0")
-    q_east  = traci.lane.getLastStepVehicleNumber("e6_0")
-    q_west  = traci.lane.getLastStepVehicleNumber("e0_0")
+    q_east = traci.lane.getLastStepVehicleNumber("e6_0")
+    q_west = traci.lane.getLastStepVehicleNumber("e0_0")
     return (q_north, q_south, q_east, q_west)
+
 
 def generate_random_routes(seed=None):
     command = [
-        "python", 
+        "python",
         f"{os.environ['SUMO_HOME']}/tools/randomTrips.py",
-        "-n", f"{NET_FILE}",
-        "-r", f"{ROU_FILE}",
-        "-b", "0",
-        "-e", "100",
-        "-p", "1",
-        "--validate"
+        "-n",
+        f"{NET_FILE}",
+        "-r",
+        f"{ROU_FILE}",
+        "-b",
+        str(SIM_START_OF_GENERATING),
+        "-e",
+        str(SIM_END_OF_GENERATING),
+        "-p",
+        str(ROUTES_PER_SEC),
+        "--validate",
     ]
-    
+
     # Dodaj seed ako je proslijeđen
     if seed is not None:
         command.extend(["--seed", str(seed)])
-    
+
     subprocess.run(command)
+
 
 def get_phase_count():
     num_phases = traci.trafficlight.getAllProgramLogics(TL_ID)[0].getPhases()
     return len(num_phases)
+
 
 def update_config(
     sumo_binary=SUMO_BINARY,
@@ -93,19 +131,25 @@ def update_config(
     last_gamma=LAST_GAMMA,
     last_epsilon=LAST_EPSILON,
     max_steps=MAX_STEPS,
-    num_episodes=NUM_EPISODES,    
+    num_episodes=NUM_EPISODES,
     num_eval_episodes=NUM_EVAL_EPISODES,
     num_route_variations=NUM_ROUTE_VARIATIONS,
     simulation_folder=SIMULATION_FOLDER,
     net_file=NET_FILE,
-    rou_file=ROU_FILE
-    ):
+    rou_file=ROU_FILE,
+    routes_per_sec=ROUTES_PER_SEC,
+    sim_start_of_generating=SIM_START_OF_GENERATING,
+    sim_end_of_generating=SIM_END_OF_GENERATING,
+):
     with open("./config.py", "w") as config_file:
         config_file.write(f"""TL_ID = "{tl_id}"\n""")
         config_file.write(f"""MIN_PHASE_DURATION = {min_phase_duration}\n""")
         config_file.write(f"""MAX_PHASE_DURATION = {max_phase_duration}\n""")
         config_file.write(f"""CONFIG_FILE = "{sim_config_file}"\n""")
         config_file.write(f"""SIMULATION_FOLDER = "{simulation_folder}"\n""")
+        config_file.write(f"""SIM_START_OF_GENERATING = {sim_start_of_generating}\n""")
+        config_file.write(f"""SIM_END_OF_GENERATING = {sim_end_of_generating}\n""")
+        config_file.write(f"""ROUTES_PER_SEC = {routes_per_sec}\n""")
         config_file.write(f"""NET_FILE = "{net_file}"\n""")
         config_file.write(f"""ROU_FILE = "{rou_file}"\n""")
         config_file.write(f"""SUMO_BINARY = "{sumo_binary}"\n""")

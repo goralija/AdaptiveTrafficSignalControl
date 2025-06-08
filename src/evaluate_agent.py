@@ -1,14 +1,30 @@
 # evaluate_agent.py
 import os
 import pickle
+import random
 import traci
-from utils import QLearningAgent, check_sumo_home, get_phase_count, get_state
-from config import TL_ID, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, SUMO_BINARY_EVAL, MAX_STEPS
+from utils import (
+    QLearningAgent,
+    check_sumo_home,
+    generate_random_routes,
+    get_phase_count,
+    get_state,
+)
+from config import (
+    NUM_ROUTE_VARIATIONS,
+    SIMULATION_FOLDER,
+    TL_ID,
+    MIN_PHASE_DURATION,
+    MAX_PHASE_DURATION,
+    CONFIG_FILE,
+    SUMO_BINARY_EVAL,
+    MAX_STEPS,
+)
 
 check_sumo_home()
 
 # Load learned Q-table
-with open('q-tables-and-logs/qtable_final.pkl', 'rb') as f:
+with open("q-tables-and-logs/qtable_final.pkl", "rb") as f:
     q_table = pickle.load(f)
 
 agent = QLearningAgent(actions=[0, 1])
@@ -18,7 +34,8 @@ agent.gamma = 0.9  # Keep the same gamma value as during training
 agent.epsilon = 0.0  # Disable exploration during evaluation
 # Start SUMO simulation
 
-def evaluate_simulation(use_agent = True):
+
+def evaluate_simulation(use_agent=True):
     traci.start([SUMO_BINARY_EVAL, "-c", CONFIG_FILE])
     step = 0
     last_action_time = 0
@@ -28,20 +45,23 @@ def evaluate_simulation(use_agent = True):
     while step < MAX_STEPS:
         traci.simulationStep()
         step += 1
-        departed_vehicles_number += traci.simulation.getDepartedNumber() 
+        departed_vehicles_number += traci.simulation.getDepartedNumber()
         arrived_vehicles_number += traci.simulation.getArrivedNumber()
-        
-        if departed_vehicles_number == arrived_vehicles_number and departed_vehicles_number > 0:
+
+        if (
+            departed_vehicles_number == arrived_vehicles_number
+            and departed_vehicles_number > 0
+        ):
             eval_path = os.path.join("evaluation-results", "evaluation_results.csv")
-            with open(eval_path, 'a') as f:
+            with open(eval_path, "a") as f:
                 if use_agent:
                     f.write(f"{step}\n")
                 else:
                     f.write(f"{step},")
             break
-        
+
         state = get_state()
-        
+
         if not use_agent:
             pass
         else:
@@ -57,12 +77,22 @@ def evaluate_simulation(use_agent = True):
                         print(f"Changing phase from {current_phase} to {new_phase}")
                         traci.trafficlight.setPhase(TL_ID, new_phase)
                     else:
-                        print(f"Warning: Current phase is {current_phase}, skipping phase change.")
+                        print(
+                            f"Warning: Current phase is {current_phase}, skipping phase change."
+                        )
                     last_action_time = step
 
     traci.close()
 
+
 if __name__ == "__main__":
+    if os.path.exists(SIMULATION_FOLDER):
+        os.chdir(SIMULATION_FOLDER)
+        # use random routes for evaluation with seed that is in range of variations
+        seed = random.randint(0, 1000) % NUM_ROUTE_VARIATIONS
+        generate_random_routes(seed=seed)
+        os.chdir("../src")
+
     print("Evaluating simulation without agent...")
     evaluate_simulation(use_agent=False)
     print("Finished evaluation without agent.\n")

@@ -5,11 +5,30 @@ import matplotlib.pyplot as plt
 import os
 import shutil
 import traci
-from utils import QLearningAgent, check_sumo_home, get_state, generate_random_routes, get_phase_count, update_config
+from utils import (
+    QLearningAgent,
+    check_sumo_home,
+    get_state,
+    generate_random_routes,
+    get_phase_count,
+    update_config,
+)
 from config import (
-    ALPHA_DECAY, EPSILON_DECAY, TL_ID, NUM_ROUTE_VARIATIONS, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, 
-    SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON,
-    SIMULATION_FOLDER
+    ALPHA_DECAY,
+    EPSILON_DECAY,
+    TL_ID,
+    NUM_ROUTE_VARIATIONS,
+    MIN_PHASE_DURATION,
+    MAX_PHASE_DURATION,
+    CONFIG_FILE,
+    SUMO_BINARY,
+    MAX_STEPS,
+    NUM_EPISODES,
+    Q_TABLE_PATH,
+    LAST_ALPHA,
+    LAST_GAMMA,
+    LAST_EPSILON,
+    SIMULATION_FOLDER,
 )
 
 check_sumo_home()
@@ -18,7 +37,9 @@ if os.path.exists(Q_TABLE_PATH):
     with open(Q_TABLE_PATH, "rb") as f:
         loaded_q_table = pickle.load(f)
     print("Učitana postojeća Q-tabela!")
-    agent = QLearningAgent(actions=[0, 1], alpha=LAST_ALPHA, gamma=LAST_GAMMA, epsilon=LAST_EPSILON)  # Koristi posljednje vrijednosti alpha, gamma i epsilon
+    agent = QLearningAgent(
+        actions=[0, 1], alpha=LAST_ALPHA, gamma=LAST_GAMMA, epsilon=LAST_EPSILON
+    )  # Koristi posljednje vrijednosti alpha, gamma i epsilon
     agent.q_table = loaded_q_table  # Koristi postojeću tabelu
 else:
     agent = QLearningAgent(actions=[0, 1])  # Kreiraj novog agenta
@@ -40,7 +61,8 @@ except PermissionError:
     print("Permission denied, unable to create directory.")
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
-    
+
+
 def run_episode(episode, sim_folder=SIMULATION_FOLDER):
     if os.path.exists(sim_folder):
         os.chdir(sim_folder)
@@ -50,7 +72,7 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
     else:
         print(f"Directory '{sim_folder}' does not exist, please check the path.")
         return
-        
+
     traci.start([SUMO_BINARY, "-c", CONFIG_FILE])
     step = 0
     last_action_time = 0
@@ -63,7 +85,7 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
         step += 1
 
         current_phase = traci.trafficlight.getPhase(TL_ID)
-        #print(f"Step {step} - Current phase: {current_phase}")
+        # print(f"Step {step} - Current phase: {current_phase}")
 
         if current_phase == -1:
             # Semafor nije spreman, ne menjaj fazu i samo nastavi
@@ -77,11 +99,17 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
             if action == 1:
                 current_phase = traci.trafficlight.getPhase(TL_ID)
                 if current_phase >= 0:
-                    new_phase = (current_phase + 1) % get_phase_count()  # koristi broj faza iz tvoje mreže
-                    print(f"Changing phase from {current_phase} to {new_phase} in step {step}")
+                    new_phase = (
+                        current_phase + 1
+                    ) % get_phase_count()  # koristi broj faza iz tvoje mreže
+                    print(
+                        f"Changing phase from {current_phase} to {new_phase} in step {step}"
+                    )
                     traci.trafficlight.setPhase(TL_ID, new_phase)
                 else:
-                    print(f"Warning: Current phase is {current_phase}, skipping phase change.")
+                    print(
+                        f"Warning: Current phase is {current_phase}, skipping phase change."
+                    )
                 last_action_time = step
         else:
             action = 0
@@ -96,20 +124,21 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
     traci.close()
     return total_reward
 
+
 # Main training loop
 for ep in range(NUM_EPISODES):
     # adjust hyperparameters for each episode
     agent.epsilon *= EPSILON_DECAY
     agent.alpha *= ALPHA_DECAY
-    
+
     print(f"Starting episode {ep}")
     reward = run_episode(ep)
 
     # save the Q-table after every nth episode
-    if (ep+1) % NUM_ROUTE_VARIATIONS == 0:
+    if (ep + 1) % NUM_ROUTE_VARIATIONS == 0:
         with open(f"q-tables-and-logs/tables/qtable_ep{ep}.pkl", "wb") as f:
             pickle.dump(agent.q_table, f)
-    
+
     if ep == NUM_EPISODES - 1:
         with open("q-tables-and-logs/qtable_final.pkl", "wb") as f:
             pickle.dump(agent.q_table, f)
@@ -120,11 +149,13 @@ for ep in range(NUM_EPISODES):
     with open("q-tables-and-logs/log.csv", "a") as log_file:
         log_file.write(f"{ep},{reward}\n")
     print(f"Episode {ep} total reward: {reward}\n")
-    
-    print (agent.alpha, agent.gamma, agent.epsilon)
+
+    print(agent.alpha, agent.gamma, agent.epsilon)
     # change hyperparameters in config.py for the next training run
-    update_config(last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon)
-    
+    update_config(
+        last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon
+    )
+
 os.chdir("./q-tables-and-logs/")
 df = pd.read_csv("log.csv", header=None)
 
@@ -133,7 +164,7 @@ x = df[0]  # First column
 y = -df[1]  # Negated second column
 
 # Plot
-plt.plot(x, y, marker='o')
+plt.plot(x, y, marker="o")
 plt.xlabel("Episode")
 plt.ylabel("Negative Total Reward")
 plt.title("Training Progress (Lower is Better)")
