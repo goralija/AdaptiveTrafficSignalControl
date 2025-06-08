@@ -163,18 +163,25 @@ for ep in range(NUM_EPISODES):
     )
 
 os.chdir("./q-tables-and-logs/")
-df = pd.read_csv("log.csv", header=None)
+df = pd.read_csv("log.csv", header=0)
 
 # Extract columns
-x = df[0]  # First column
-y = -df[1]  # Negated second column
+x = df["Episode"]  # First column
+y = -df["Total Reward"]  # Negated second column
+
+# reduce number of points 10 times by taking average values
+x = x[::10].rolling(window=10).mean().dropna()
+yy = y[::10].rolling(window=10).mean().dropna()
+y = y[::10].rolling(window=10).median().dropna()
 
 # Plot
-plt.plot(x, y, marker="o")
+plt.plot(x, y, marker="o" , linestyle="-", color="blue", label="Median")
+plt.plot(x, yy, marker="o", linestyle="--", color="orange", label="Mean")
 plt.xlabel("Episode")
 plt.ylabel("Negative Total Reward")
 plt.title("Training Progress (Lower is Better)")
 plt.grid(True)
 plt.tight_layout()
+plt.legend()
 plt.savefig("training_progress.png")
 os.chdir("..")
