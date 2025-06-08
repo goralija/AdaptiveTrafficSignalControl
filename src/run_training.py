@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import shutil
 import traci
-from qlearning_agent import QLearningAgent
-from utils import check_sumo_home, get_state, generate_random_routes, get_phase_count, update_config
+from utils import QLearningAgent, check_sumo_home, get_state, generate_random_routes, get_phase_count, update_config
 from config import (
     TL_ID, NUM_ROUTE_VARIATIONS, MIN_PHASE_DURATION, MAX_PHASE_DURATION, CONFIG_FILE, 
     SUMO_BINARY, MAX_STEPS, NUM_EPISODES, Q_TABLE_PATH, LAST_ALPHA, LAST_GAMMA, LAST_EPSILON,
@@ -114,6 +113,9 @@ for ep in range(NUM_EPISODES):
     if ep == NUM_EPISODES - 1:
         with open("q-tables-and-logs/qtable_final.pkl", "wb") as f:
             pickle.dump(agent.q_table, f)
+        if os.path.exists("evaluation-results"):
+            shutil.rmtree("evaluation-results")
+        os.makedirs("evaluation-results")
 
     with open("q-tables-and-logs/log.csv", "a") as log_file:
         log_file.write(f"{ep},{reward}\n")
