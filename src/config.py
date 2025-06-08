@@ -1,8 +1,8 @@
 TL_ID = "cluster_39630061_4673245496_6970320248_6970320249_#1more"
 MIN_PHASE_DURATION = 20
 MAX_PHASE_DURATION = 100
-CONFIG_FILE = "../simulation-otoka/config.sumocfg"
-SIMULATION_FOLDER = "../simulation-otoka/"
+CONFIG_FILE = "../simulation/config.sumocfg"
+SIMULATION_FOLDER = "../simulation/"
 SIM_START_OF_GENERATING = 0
 SIM_END_OF_GENERATING = 1000
 ROUTES_PER_SEC = 1
