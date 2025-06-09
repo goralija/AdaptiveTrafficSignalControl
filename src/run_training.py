@@ -1,5 +1,6 @@
 # run_training.py
 import pickle
+import random
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
@@ -159,7 +160,9 @@ for ep in range(NUM_EPISODES):
     print(agent.alpha, agent.gamma, agent.epsilon)
     # change hyperparameters in config.py for the next training run
     update_config(
-        last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon
+        last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon,
+        sim_end_of_generating=random.randint(200, 1700),
+        routes_per_sec=random.random() * 6,
     )
 
 os.chdir("./q-tables-and-logs/")
