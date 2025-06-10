@@ -17,6 +17,7 @@ from utils import (
 from config import (
     ALPHA_DECAY,
     EPSILON_DECAY,
+    SIM_END_OF_GENERATING,
     TL_ID,
     NUM_ROUTE_VARIATIONS,
     MIN_PHASE_DURATION,
@@ -78,12 +79,27 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
     step = 0
     last_action_time = 0
     total_reward = 0
+    departed_vehicles_number = 0
+    arrived_vehicles_number = 0
+    departures_ended = False
 
     state = get_state()
 
     while step < MAX_STEPS:
         traci.simulationStep()
         step += 1
+        if step >= SIM_END_OF_GENERATING:
+            departures_ended = True
+        
+        departed_vehicles_number += traci.simulation.getDepartedNumber()
+        arrived_vehicles_number += traci.simulation.getArrivedNumber()
+
+        if (
+            departed_vehicles_number == arrived_vehicles_number
+            and departed_vehicles_number > 0
+            and departures_ended
+        ):
+            break
 
         current_phase = traci.trafficlight.getPhase(TL_ID)
         # print(f"Step {step} - Current phase: {current_phase}")
@@ -136,7 +152,7 @@ for ep in range(NUM_EPISODES):
     reward = run_episode(ep)
 
     # save the Q-table after every nth episode
-    if (ep + 1) % NUM_ROUTE_VARIATIONS == 0:
+    if (ep + 1) % NUM_ROUTE_VARIATIONS == 0 and (ep + 1) % 99 == 0:
         with open(f"q-tables-and-logs/tables/qtable_ep{ep}.pkl", "wb") as f:
             pickle.dump(agent.q_table, f)
 
@@ -161,8 +177,8 @@ for ep in range(NUM_EPISODES):
     # change hyperparameters in config.py for the next training run
     update_config(
         last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon,
-        sim_end_of_generating=random.randint(200, 1700),
-        routes_per_sec=random.random() * 6,
+        sim_end_of_generating=random.randint(200, 3600),
+        routes_per_sec=random.random() * random.randint(4, 10) + random.random(),
     )
 
 os.chdir("./q-tables-and-logs/")

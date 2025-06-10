@@ -9,6 +9,7 @@ from utils import (
     generate_random_routes,
     get_phase_count,
     get_state,
+    update_config,
 )
 from config import (
     NUM_ROUTE_VARIATIONS,
@@ -86,6 +87,11 @@ def evaluate_simulation(use_agent=True):
 
 
 if __name__ == "__main__":
+    update_config(
+        sim_end_of_generating=random.randint(200, 1700),
+        routes_per_sec=random.random() * random.randint(4, 10) + random.random()
+    )
+    
     if os.path.exists(SIMULATION_FOLDER):
         os.chdir(SIMULATION_FOLDER)
         # use random routes for evaluation with seed that is in range of variations

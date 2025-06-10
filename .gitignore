@@ -22,5 +22,5 @@ src/q-tables-and-logs/
 *.env.development
 *.env.test
 *copy.py
-simulation-files/*.xml
-!simulation-files/*.view.xml
+*/*.xml
+!*/*.view.xml
