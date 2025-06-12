@@ -4,6 +4,7 @@ import sys
 import traci
 import subprocess
 from config import (
+    EPISODES_DONE,
     NET_FILE,
     ROU_FILE,
     SIMULATION_FOLDER,
@@ -77,6 +78,11 @@ def get_state(tls_id=TL_ID):
     return tuple(queue_lengths)
 
 def generate_random_routes(seed=None):
+    os.chdir('../src/')
+    sim_end_of_generating = random.randint(600, 1800)
+    routes_per_sec = random.random() * random.randint(4, 7) + random.random()
+    update_config(sim_end_of_generating=sim_end_of_generating, routes_per_sec=routes_per_sec)
+    os.chdir('../simulation-config/')
     command = [
         "python",
         f"{os.environ['SUMO_HOME']}/tools/randomTrips.py",
@@ -87,9 +93,9 @@ def generate_random_routes(seed=None):
         "-b",
         str(SIM_START_OF_GENERATING),
         "-e",
-        str(SIM_END_OF_GENERATING),
+        str(sim_end_of_generating),
         "-p",
-        str(ROUTES_PER_SEC),
+        str(routes_per_sec),
         "--validate",
     ]
 
@@ -98,6 +104,7 @@ def generate_random_routes(seed=None):
         command.extend(["--seed", str(seed)])
 
     subprocess.run(command)
+    return sim_end_of_generating
 
 
 def get_phase_count():
@@ -122,6 +129,7 @@ def update_config(
     last_gamma=LAST_GAMMA,
     last_epsilon=LAST_EPSILON,
     max_steps=MAX_STEPS,
+    episodes_done=EPISODES_DONE,
     num_episodes=NUM_EPISODES,
     num_eval_episodes=NUM_EVAL_EPISODES,
     num_route_variations=NUM_ROUTE_VARIATIONS,
@@ -146,6 +154,7 @@ def update_config(
         config_file.write(f"""SUMO_BINARY = "{sumo_binary}"\n""")
         config_file.write(f"""SUMO_BINARY_EVAL = "{sumo_binary_eval}"\n""")
         config_file.write(f"""MAX_STEPS = {max_steps}\n""")
+        config_file.write(f"""EPISODES_DONE = {episodes_done}\n""")
         config_file.write(f"""NUM_EPISODES = {num_episodes}\n""")
         config_file.write(f"""NUM_EVAL_EPISODES = {num_eval_episodes}\n""")
         config_file.write(f"""NUM_ROUTE_VARIATIONS = {num_route_variations}\n""")

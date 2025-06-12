@@ -24,3 +24,4 @@ src/q-tables-and-logs/
 *copy.py
 */*.xml
 !*/*.view.xml
+staro/

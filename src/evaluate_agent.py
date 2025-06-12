@@ -9,7 +9,6 @@ from utils import (
     generate_random_routes,
     get_phase_count,
     get_state,
-    update_config,
 )
 from config import (
     NUM_ROUTE_VARIATIONS,
@@ -36,7 +35,7 @@ agent.epsilon = 0.0  # Disable exploration during evaluation
 # Start SUMO simulation
 
 
-def evaluate_simulation(use_agent=True):
+def evaluate_simulation(use_agent=True, sim_generating_end=0):
     traci.start([SUMO_BINARY_EVAL, "-c", CONFIG_FILE])
     step = 0
     last_action_time = 0
@@ -52,6 +51,7 @@ def evaluate_simulation(use_agent=True):
         if (
             departed_vehicles_number == arrived_vehicles_number
             and departed_vehicles_number > 0
+            and step >= sim_generating_end
         ):
             eval_path = os.path.join("evaluation-results", "evaluation_results.csv")
             with open(eval_path, "a") as f:
@@ -87,22 +87,19 @@ def evaluate_simulation(use_agent=True):
 
 
 if __name__ == "__main__":
-    update_config(
-        sim_end_of_generating=random.randint(200, 1700),
-        routes_per_sec=random.random() * random.randint(4, 10) + random.random()
-    )
-    
     if os.path.exists(SIMULATION_FOLDER):
         os.chdir(SIMULATION_FOLDER)
         # use random routes for evaluation with seed that is in range of variations
         seed = random.randint(0, 1000) % NUM_ROUTE_VARIATIONS
-        generate_random_routes(seed=seed)
+        sim_generating_end = generate_random_routes(
+            seed=seed,
+        )
         os.chdir("../src")
 
     print("Evaluating simulation without agent...")
-    evaluate_simulation(use_agent=False)
+    evaluate_simulation(use_agent=False, sim_generating_end=sim_generating_end)
     print("Finished evaluation without agent.\n")
 
     print("Evaluating simulation with agent...")
-    evaluate_simulation(use_agent=True)
+    evaluate_simulation(use_agent=True, sim_generating_end=sim_generating_end)
     print("Finished evaluation with agent.")

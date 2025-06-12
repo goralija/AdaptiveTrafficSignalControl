@@ -1,6 +1,5 @@
 # run_training.py
 import pickle
-import random
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
@@ -16,8 +15,8 @@ from utils import (
 )
 from config import (
     ALPHA_DECAY,
+    EPISODES_DONE,
     EPSILON_DECAY,
-    SIM_END_OF_GENERATING,
     TL_ID,
     NUM_ROUTE_VARIATIONS,
     MIN_PHASE_DURATION,
@@ -46,30 +45,29 @@ if os.path.exists(Q_TABLE_PATH):
 else:
     agent = QLearningAgent(actions=[0, 1])  # Kreiraj novog agenta
     print("Nema postojeće Q-tabele, kreiran novi agent!")
-# preparing the directory for Q-tables and logs
-try:
-    if os.path.exists("q-tables-and-logs"):
-        shutil.rmtree("q-tables-and-logs")
-    os.makedirs("q-tables-and-logs")
-    os.chdir("q-tables-and-logs")
-    os.makedirs("tables")
-    os.chdir("..")
-except FileExistsError:
-    print("Directory already exists, skipping creation.")
-except FileNotFoundError:
-    print("Directory not found, creating a new one.")
-    os.makedirs("q-tables-and-logs")
-except PermissionError:
-    print("Permission denied, unable to create directory.")
-except Exception as e:
-    print(f"An unexpected error occurred: {e}")
-
+    # preparing the directory for Q-tables and logs
+    try:
+        if os.path.exists("q-tables-and-logs"):
+            shutil.rmtree("q-tables-and-logs")
+        os.makedirs("q-tables-and-logs")
+        os.chdir("q-tables-and-logs")
+        os.makedirs("tables")
+        os.chdir("..")
+    except FileExistsError:
+        print("Directory already exists, skipping creation.")
+    except FileNotFoundError:
+        print("Directory not found, creating a new one.")
+        os.makedirs("q-tables-and-logs")
+    except PermissionError:
+        print("Permission denied, unable to create directory.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 def run_episode(episode, sim_folder=SIMULATION_FOLDER):
     if os.path.exists(sim_folder):
         os.chdir(sim_folder)
         seed = episode % NUM_ROUTE_VARIATIONS
-        generate_random_routes(seed=seed)
+        sim_generating_end = generate_random_routes(seed)
         os.chdir("../src")
     else:
         print(f"Directory '{sim_folder}' does not exist, please check the path.")
@@ -88,7 +86,7 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
     while step < MAX_STEPS:
         traci.simulationStep()
         step += 1
-        if step >= SIM_END_OF_GENERATING:
+        if step >= sim_generating_end:
             departures_ended = True
         
         departed_vehicles_number += traci.simulation.getDepartedNumber()
@@ -102,10 +100,8 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
             break
 
         current_phase = traci.trafficlight.getPhase(TL_ID)
-        # print(f"Step {step} - Current phase: {current_phase}")
 
         if current_phase == -1:
-            # Semafor nije spreman, ne menjaj fazu i samo nastavi
             continue
 
         if step - last_action_time >= MIN_PHASE_DURATION:
@@ -139,17 +135,16 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
         state = next_state
 
     traci.close()
-    return total_reward
-
+    return (total_reward, step, sim_generating_end, arrived_vehicles_number)
 
 # Main training loop
-for ep in range(NUM_EPISODES):
+for ep in range(EPISODES_DONE+1, NUM_EPISODES):
     # adjust hyperparameters for each episode
     agent.epsilon *= EPSILON_DECAY
     agent.alpha *= ALPHA_DECAY
 
     print(f"Starting episode {ep}")
-    reward = run_episode(ep)
+    reward, step, sim_generating_end, arrived_vehicles_number = run_episode(ep)
 
     # save the Q-table after every nth episode
     if (ep + 1) % NUM_ROUTE_VARIATIONS == 0 and (ep + 1) % 99 == 0:
@@ -168,17 +163,15 @@ for ep in range(NUM_EPISODES):
             eval_file.write("Fixed,Agent\n")
 
     with open("q-tables-and-logs/log.csv", "a") as log_file:
-        if ep == 0:
-            log_file.write("Episode,Total Reward\n")
-        log_file.write(f"{ep},{reward}\n")
+        if ep == 1:
+            log_file.write("Episode,Total Reward,End of Generating Vehicles, End of Arriving, Number of Vehicles\n")
+        log_file.write(f"{ep},{reward},{sim_generating_end},{step},{arrived_vehicles_number}\n")
     print(f"Episode {ep} total reward: {reward}\n")
 
     print(agent.alpha, agent.gamma, agent.epsilon)
     # change hyperparameters in config.py for the next training run
     update_config(
-        last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon,
-        sim_end_of_generating=random.randint(200, 3600),
-        routes_per_sec=random.random() * random.randint(4, 10) + random.random(),
+        last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon
     )
 
 os.chdir("./q-tables-and-logs/")
@@ -188,10 +181,10 @@ df = pd.read_csv("log.csv", header=0)
 x = df["Episode"]  # First column
 y = -df["Total Reward"]  # Negated second column
 
-# reduce number of points 10 times by taking average values
-x = x[::10].rolling(window=10).mean().dropna()
-yy = y[::10].rolling(window=10).mean().dropna()
-y = y[::10].rolling(window=10).median().dropna()
+# Smooth the data
+x = x[::80].rolling(window=10).mean().dropna()
+yy = y[::80].rolling(window=10).mean().dropna()
+y = y[::80].rolling(window=10).median().dropna()
 
 # Plot
 plt.plot(x, y, marker="o" , linestyle="-", color="blue", label="Median")
