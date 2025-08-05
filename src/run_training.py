@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import shutil
+import sys
 import traci
 from utils import (
     QLearningAgent,
@@ -33,6 +34,13 @@ from config import (
 )
 
 check_sumo_home()
+
+if "--new" in sys.argv:
+    print("Cleaning previous training artifacts...")
+    if os.path.exists("evaluation-results"):
+        shutil.rmtree("evaluation-results")
+    if os.path.exists("q-tables-and-logs"):
+        shutil.rmtree("q-tables-and-logs")
 
 if os.path.exists(Q_TABLE_PATH):
     with open(Q_TABLE_PATH, "rb") as f:

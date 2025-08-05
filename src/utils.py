@@ -30,6 +30,10 @@ from config import (
     ROUTES_PER_SEC,
     SIM_START_OF_GENERATING,
     SIM_END_OF_GENERATING,
+    SIM_GENERATING_RANGE_MAX,
+    SIM_GENERATING_RANGE_MIN,
+    ROUTES_PER_SEC_RANGE_MIN,
+    ROUTES_PER_SEC_RANGE_MAX
 )
 
 
@@ -79,8 +83,8 @@ def get_state(tls_id=TL_ID):
 
 def generate_random_routes(seed=None):
     os.chdir('../src/')
-    sim_end_of_generating = random.randint(600, 1800)
-    routes_per_sec = random.random() * random.randint(4, 7) + random.random()
+    sim_end_of_generating = random.randint(SIM_GENERATING_RANGE_MIN, SIM_GENERATING_RANGE_MAX)
+    routes_per_sec = random.random() * random.randint(ROUTES_PER_SEC_RANGE_MIN, ROUTES_PER_SEC_RANGE_MAX) + random.random()
     update_config(sim_end_of_generating=sim_end_of_generating, routes_per_sec=routes_per_sec)
     os.chdir('../simulation-config/')
     command = [
@@ -139,6 +143,10 @@ def update_config(
     routes_per_sec=ROUTES_PER_SEC,
     sim_start_of_generating=SIM_START_OF_GENERATING,
     sim_end_of_generating=SIM_END_OF_GENERATING,
+    sim_generating_range_min=SIM_GENERATING_RANGE_MIN,
+    sim_generating_range_max=SIM_GENERATING_RANGE_MAX,
+    routes_per_sec_range_min=ROUTES_PER_SEC_RANGE_MIN,
+    routes_per_sec_range_max=ROUTES_PER_SEC_RANGE_MAX,
 ):
     with open("./config.py", "w") as config_file:
         config_file.write(f"""TL_ID = "{tl_id}"\n""")
@@ -146,8 +154,12 @@ def update_config(
         config_file.write(f"""MAX_PHASE_DURATION = {max_phase_duration}\n""")
         config_file.write(f"""CONFIG_FILE = "{sim_config_file}"\n""")
         config_file.write(f"""SIMULATION_FOLDER = "{simulation_folder}"\n""")
+        config_file.write(f"""SIM_GENERATING_RANGE_MIN = {sim_generating_range_min}\n""")
+        config_file.write(f"""SIM_GENERATING_RANGE_MAX = {sim_generating_range_max}\n""")
         config_file.write(f"""SIM_START_OF_GENERATING = {sim_start_of_generating}\n""")
         config_file.write(f"""SIM_END_OF_GENERATING = {sim_end_of_generating}\n""")
+        config_file.write(f"""ROUTES_PER_SEC_RANGE_MIN = {routes_per_sec_range_min}\n""")
+        config_file.write(f"""ROUTES_PER_SEC_RANGE_MAX = {routes_per_sec_range_max}\n""")
         config_file.write(f"""ROUTES_PER_SEC = {routes_per_sec}\n""")
         config_file.write(f"""NET_FILE = "{net_file}"\n""")
         config_file.write(f"""ROU_FILE = "{rou_file}"\n""")
