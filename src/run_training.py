@@ -71,7 +71,7 @@ else:
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
-def run_episode(episode, sim_folder=SIMULATION_FOLDER):
+def run_episode(episode, sim_folder=SIMULATION_FOLDER, total_avg_waiting_time=0):
     if os.path.exists(sim_folder):
         os.chdir(sim_folder)
         seed = episode % NUM_ROUTE_VARIATIONS
@@ -96,6 +96,10 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
         step += 1
         if step >= sim_generating_end:
             departures_ended = True
+            
+        waiting_times = [traci.vehicle.getWaitingTime(veh_id) for veh_id in traci.vehicle.getIDList()]
+        avg_waiting_time = sum(waiting_times) / len(waiting_times) if waiting_times else 0
+        total_avg_waiting_time += avg_waiting_time
         
         departed_vehicles_number += traci.simulation.getDepartedNumber()
         arrived_vehicles_number += traci.simulation.getArrivedNumber()
@@ -143,16 +147,18 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
         state = next_state
 
     traci.close()
-    return (total_reward, step, sim_generating_end, arrived_vehicles_number)
+    return (total_reward, step, sim_generating_end, arrived_vehicles_number, total_avg_waiting_time)
 
 # Main training loop
 for ep in range(EPISODES_DONE+1, NUM_EPISODES):
     # adjust hyperparameters for each episode
     agent.epsilon *= EPSILON_DECAY
     agent.alpha *= ALPHA_DECAY
+    
+    total_avg_waiting_time = 0
 
     print(f"Starting episode {ep}")
-    reward, step, sim_generating_end, arrived_vehicles_number = run_episode(ep)
+    reward, step, sim_generating_end, arrived_vehicles_number, total_avg_waiting_time = run_episode(ep, total_avg_waiting_time=total_avg_waiting_time)
 
     # save the Q-table after every nth episode
     if (ep + 1) % NUM_ROUTE_VARIATIONS == 0 and (ep + 1) % 99 == 0:
@@ -172,8 +178,9 @@ for ep in range(EPISODES_DONE+1, NUM_EPISODES):
 
     with open("q-tables-and-logs/log.csv", "a") as log_file:
         if ep == 1:
-            log_file.write("Episode,Total Reward,End of Generating Vehicles, End of Arriving, Number of Vehicles\n")
-        log_file.write(f"{ep},{reward},{sim_generating_end},{step},{arrived_vehicles_number}\n")
+            log_file.write("Episode,Total Reward,End of Generating Vehicles, End of Arriving, Number of Vehicles, Avg Waiting Time\n")
+        log_file.write(f"{ep},{reward},{sim_generating_end},{step},{arrived_vehicles_number},{total_avg_waiting_time}\n")
+
     print(f"Episode {ep} total reward: {reward}\n")
 
     print(agent.alpha, agent.gamma, agent.epsilon)

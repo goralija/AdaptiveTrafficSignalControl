@@ -33,7 +33,8 @@ from config import (
     SIM_GENERATING_RANGE_MAX,
     SIM_GENERATING_RANGE_MIN,
     ROUTES_PER_SEC_RANGE_MIN,
-    ROUTES_PER_SEC_RANGE_MAX
+    ROUTES_PER_SEC_RANGE_MAX,
+    ROUTES_PER_SEC_RANGE_RANDOMIZE
 )
 
 
@@ -84,7 +85,8 @@ def get_state(tls_id=TL_ID):
 def generate_random_routes(seed=None):
     os.chdir('../src/')
     sim_end_of_generating = random.randint(SIM_GENERATING_RANGE_MIN, SIM_GENERATING_RANGE_MAX)
-    routes_per_sec = random.random() * random.randint(ROUTES_PER_SEC_RANGE_MIN, ROUTES_PER_SEC_RANGE_MAX) + random.random()
+    routes_per_sec = random.randint(ROUTES_PER_SEC_RANGE_MIN, ROUTES_PER_SEC_RANGE_MAX)
+    routes_per_sec = random.random() * routes_per_sec + random.random() if ROUTES_PER_SEC_RANGE_RANDOMIZE else routes_per_sec
     update_config(sim_end_of_generating=sim_end_of_generating, routes_per_sec=routes_per_sec)
     os.chdir('../simulation-config/')
     command = [
@@ -147,6 +149,7 @@ def update_config(
     sim_generating_range_max=SIM_GENERATING_RANGE_MAX,
     routes_per_sec_range_min=ROUTES_PER_SEC_RANGE_MIN,
     routes_per_sec_range_max=ROUTES_PER_SEC_RANGE_MAX,
+    routes_per_sec_range_randomize=ROUTES_PER_SEC_RANGE_RANDOMIZE
 ):
     with open("./config.py", "w") as config_file:
         config_file.write(f"""TL_ID = "{tl_id}"\n""")
@@ -160,6 +163,7 @@ def update_config(
         config_file.write(f"""SIM_END_OF_GENERATING = {sim_end_of_generating}\n""")
         config_file.write(f"""ROUTES_PER_SEC_RANGE_MIN = {routes_per_sec_range_min}\n""")
         config_file.write(f"""ROUTES_PER_SEC_RANGE_MAX = {routes_per_sec_range_max}\n""")
+        config_file.write(f"""ROUTES_PER_SEC_RANGE_RANDOMIZE = {routes_per_sec_range_randomize}\n""")
         config_file.write(f"""ROUTES_PER_SEC = {routes_per_sec}\n""")
         config_file.write(f"""NET_FILE = "{net_file}"\n""")
         config_file.write(f"""ROU_FILE = "{rou_file}"\n""")
