@@ -31,6 +31,10 @@ from config import (
     LAST_GAMMA,
     LAST_EPSILON,
     SIMULATION_FOLDER,
+    REWARD_STATE_NORMALIZER,
+    REWARD_STATE_WEIGHT,
+    REWARD_WAITING_NORMALIZER,
+    REWARD_WAITING_WEIGHT
 )
 
 check_sumo_home()
@@ -139,7 +143,10 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER, total_avg_waiting_time=0)
         else:
             action = 0
 
-        reward = -sum(state)
+        reward = - (
+            REWARD_STATE_WEIGHT * sum(state) / REWARD_STATE_NORMALIZER +
+            REWARD_WAITING_WEIGHT * avg_waiting_time / REWARD_WAITING_NORMALIZER
+        )
         total_reward += reward
 
         next_state = get_state()

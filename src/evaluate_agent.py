@@ -19,6 +19,7 @@ from config import (
     CONFIG_FILE,
     SUMO_BINARY_EVAL,
     MAX_STEPS,
+    NUM_EVAL_EPISODES
 )
 
 check_sumo_home()
@@ -87,19 +88,21 @@ def evaluate_simulation(use_agent=True, sim_generating_end=0):
 
 
 if __name__ == "__main__":
-    if os.path.exists(SIMULATION_FOLDER):
-        os.chdir(SIMULATION_FOLDER)
-        # use random routes for evaluation with seed that is in range of variations
-        seed = random.randint(0, 1000) % NUM_ROUTE_VARIATIONS
-        sim_generating_end = generate_random_routes(
-            seed=seed,
-        )
-        os.chdir("../src")
+    for i in range(NUM_EVAL_EPISODES):
+        print(f"Evaluation run {i+1}/{NUM_EVAL_EPISODES}")
+        if os.path.exists(SIMULATION_FOLDER):
+            os.chdir(SIMULATION_FOLDER)
+            # use random routes for evaluation with seed that is in range of variations
+            seed = random.randint(0, 1000) % NUM_ROUTE_VARIATIONS
+            sim_generating_end = generate_random_routes(
+                seed=seed,
+            )
+            os.chdir("../src")
 
-    print("Evaluating simulation without agent...")
-    evaluate_simulation(use_agent=False, sim_generating_end=sim_generating_end)
-    print("Finished evaluation without agent.\n")
+        print("Evaluating simulation without agent...")
+        evaluate_simulation(use_agent=False, sim_generating_end=sim_generating_end)
+        print("Finished evaluation without agent.\n")
 
-    print("Evaluating simulation with agent...")
-    evaluate_simulation(use_agent=True, sim_generating_end=sim_generating_end)
-    print("Finished evaluation with agent.")
+        print("Evaluating simulation with agent...")
+        evaluate_simulation(use_agent=True, sim_generating_end=sim_generating_end)
+        print("Finished evaluation with agent.")

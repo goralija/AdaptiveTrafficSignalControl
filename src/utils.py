@@ -34,7 +34,11 @@ from config import (
     SIM_GENERATING_RANGE_MIN,
     ROUTES_PER_SEC_RANGE_MIN,
     ROUTES_PER_SEC_RANGE_MAX,
-    ROUTES_PER_SEC_RANGE_RANDOMIZE
+    ROUTES_PER_SEC_RANGE_RANDOMIZE,
+    REWARD_STATE_NORMALIZER,
+    REWARD_STATE_WEIGHT,
+    REWARD_WAITING_NORMALIZER,
+    REWARD_WAITING_WEIGHT
 )
 
 
@@ -149,7 +153,11 @@ def update_config(
     sim_generating_range_max=SIM_GENERATING_RANGE_MAX,
     routes_per_sec_range_min=ROUTES_PER_SEC_RANGE_MIN,
     routes_per_sec_range_max=ROUTES_PER_SEC_RANGE_MAX,
-    routes_per_sec_range_randomize=ROUTES_PER_SEC_RANGE_RANDOMIZE
+    routes_per_sec_range_randomize=ROUTES_PER_SEC_RANGE_RANDOMIZE,
+    reward_waiting_normalizer=REWARD_WAITING_NORMALIZER,
+    reward_state_normalizer=REWARD_STATE_NORMALIZER,
+    reward_waiting_weight=REWARD_WAITING_WEIGHT,
+    reward_state_weight=REWARD_STATE_WEIGHT
 ):
     with open("./config.py", "w") as config_file:
         config_file.write(f"""TL_ID = "{tl_id}"\n""")
@@ -183,3 +191,7 @@ def update_config(
         config_file.write(f"""LAST_ALPHA = {last_alpha}\n""")
         config_file.write(f"""LAST_GAMMA = {last_gamma}\n""")
         config_file.write(f"""LAST_EPSILON = {last_epsilon}\n""")
+        config_file.write(f"""REWARD_STATE_WEIGHT = {reward_state_weight}\n""")
+        config_file.write(f"""REWARD_WAITING_WEIGHT = {reward_waiting_weight}\n""")
+        config_file.write(f"""REWARD_STATE_NORMALIZER = {reward_state_normalizer}\n""")
+        config_file.write(f"""REWARD_WAITING_NORMALIZER = {reward_waiting_normalizer}\n""")
