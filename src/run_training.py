@@ -1,4 +1,3 @@
-# run_training.py
 import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,6 +12,7 @@ from utils import (
     generate_random_routes,
     get_phase_count,
     update_config,
+    calculate_reward  # Dodata nova funkcija za nagradu
 )
 from config import (
     ALPHA_DECAY,
@@ -31,10 +31,7 @@ from config import (
     LAST_GAMMA,
     LAST_EPSILON,
     SIMULATION_FOLDER,
-    REWARD_STATE_NORMALIZER,
-    REWARD_STATE_WEIGHT,
-    REWARD_WAITING_NORMALIZER,
-    REWARD_WAITING_WEIGHT
+    REWARD_CONFIG  # Novi konfig objekat
 )
 
 check_sumo_home()
@@ -52,71 +49,72 @@ if os.path.exists(Q_TABLE_PATH):
     print("Učitana postojeća Q-tabela!")
     agent = QLearningAgent(
         actions=[0, 1], alpha=LAST_ALPHA, gamma=LAST_GAMMA, epsilon=LAST_EPSILON
-    )  # Koristi posljednje vrijednosti alpha, gamma i epsilon
-    agent.q_table = loaded_q_table  # Koristi postojeću tabelu
+    )
+    agent.q_table = loaded_q_table
 else:
-    agent = QLearningAgent(actions=[0, 1])  # Kreiraj novog agenta
+    agent = QLearningAgent(actions=[0, 1])
     print("Nema postojeće Q-tabele, kreiran novi agent!")
-    # preparing the directory for Q-tables and logs
     try:
         if os.path.exists("q-tables-and-logs"):
             shutil.rmtree("q-tables-and-logs")
         os.makedirs("q-tables-and-logs")
-        os.chdir("q-tables-and-logs")
-        os.makedirs("tables")
-        os.chdir("..")
-    except FileExistsError:
-        print("Directory already exists, skipping creation.")
-    except FileNotFoundError:
-        print("Directory not found, creating a new one.")
-        os.makedirs("q-tables-and-logs")
-    except PermissionError:
-        print("Permission denied, unable to create directory.")
+        os.makedirs("q-tables-and-logs/tables", exist_ok=True)
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print(f"Greška pri kreiranju direktorijuma: {e}")
 
-def run_episode(episode, sim_folder=SIMULATION_FOLDER, total_avg_waiting_time=0):
-    if os.path.exists(sim_folder):
-        os.chdir(sim_folder)
-        seed = episode % NUM_ROUTE_VARIATIONS
-        sim_generating_end = generate_random_routes(seed)
-        os.chdir("../src")
-    else:
-        print(f"Directory '{sim_folder}' does not exist, please check the path.")
-        return
-
+def run_episode(episode, sim_folder=SIMULATION_FOLDER):
+    if not os.path.exists(sim_folder):
+        print(f"Direktorijum '{sim_folder}' ne postoji!")
+        return (0, 0, 0, 0, 0)
+    
+    os.chdir(sim_folder)
+    seed = episode % NUM_ROUTE_VARIATIONS
+    sim_generating_end = generate_random_routes(seed)
+    os.chdir("../src")
+    
     traci.start([SUMO_BINARY, "-c", CONFIG_FILE])
     step = 0
     last_action_time = 0
     total_reward = 0
-    departed_vehicles_number = 0
-    arrived_vehicles_number = 0
+    departed_vehicles = 0
+    arrived_vehicles = 0
     departures_ended = False
-
-    state = get_state()
+    cumulative_waiting = 0
+    measurement_count = 0
+    
+    # Inicijalizacija stanja
+    lanes = traci.trafficlight.getControlledLanes(TL_ID)
+    state = get_state(TL_ID)
+    
+    if step % 500 == 0 and step > 0:
+        print(f"Epizoda {episode}, Step {step}: "
+            f"Departed={current_departed}, Arrived={current_arrived}, "
+            f"Waiting={avg_waiting:.1f}s")
 
     while step < MAX_STEPS:
         traci.simulationStep()
         step += 1
+        
+        current_departed = traci.simulation.getDepartedNumber()
+        current_arrived = traci.simulation.getArrivedNumber()
+        
+        # Provera završetka generisanja vozila
         if step >= sim_generating_end:
             departures_ended = True
             
+        # Provera kraja simulacije
+        if departures_ended and current_departed > 0:
+            if arrived_vehicles+current_arrived >= 1.00 * departed_vehicles+current_departed:
+                break
+
+        # Prikupljanje podataka o čekanju
         waiting_times = [traci.vehicle.getWaitingTime(veh_id) for veh_id in traci.vehicle.getIDList()]
-        avg_waiting_time = sum(waiting_times) / len(waiting_times) if waiting_times else 0
-        total_avg_waiting_time += avg_waiting_time
-        
-        departed_vehicles_number += traci.simulation.getDepartedNumber()
-        arrived_vehicles_number += traci.simulation.getArrivedNumber()
+        if waiting_times:
+            cumulative_waiting += sum(waiting_times)
+            measurement_count += len(waiting_times)
 
-        if (
-            departed_vehicles_number == arrived_vehicles_number
-            and departed_vehicles_number > 0
-            and departures_ended
-        ):
-            break
-
+        # Izbor akcije
         current_phase = traci.trafficlight.getPhase(TL_ID)
-
         if current_phase == -1:
             continue
 
@@ -125,97 +123,94 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER, total_avg_waiting_time=0)
                 action = 1
             else:
                 action = agent.choose_action(state)
+                
             if action == 1:
-                current_phase = traci.trafficlight.getPhase(TL_ID)
-                if current_phase >= 0:
-                    new_phase = (
-                        current_phase + 1
-                    ) % get_phase_count()  # koristi broj faza iz tvoje mreže
-                    print(
-                        f"Changing phase from {current_phase} to {new_phase} in step {step}"
-                    )
-                    traci.trafficlight.setPhase(TL_ID, new_phase)
-                else:
-                    print(
-                        f"Warning: Current phase is {current_phase}, skipping phase change."
-                    )
+                new_phase = (current_phase + 1) % get_phase_count()
+                traci.trafficlight.setPhase(TL_ID, new_phase)
                 last_action_time = step
         else:
             action = 0
 
-        reward = - (
-            REWARD_STATE_WEIGHT * sum(state) / REWARD_STATE_NORMALIZER +
-            REWARD_WAITING_WEIGHT * avg_waiting_time / REWARD_WAITING_NORMALIZER
-        )
+        # Izračun nagrade
+        reward = calculate_reward(TL_ID, REWARD_CONFIG)
         total_reward += reward
 
-        next_state = get_state()
+        # Učenje agenta
+        next_state = get_state(TL_ID)
         agent.learn(state, action, reward, next_state)
         state = next_state
+        
+        # update pokrenutih i pristiglih vozila
+        departed_vehicles += current_departed
+        arrived_vehicles += current_arrived
 
     traci.close()
-    return (total_reward, step, sim_generating_end, arrived_vehicles_number, total_avg_waiting_time)
+    
+    # Izračun prosečnog vremena čekanja
+    avg_waiting = cumulative_waiting / measurement_count if measurement_count > 0 else 0
+    
+    return (total_reward, step, sim_generating_end, arrived_vehicles, avg_waiting)
 
-# Main training loop
-for ep in range(EPISODES_DONE+1, NUM_EPISODES):
-    # adjust hyperparameters for each episode
+# Glavna petlja treniranja
+for ep in range(EPISODES_DONE + 1, NUM_EPISODES + 1):
     agent.epsilon *= EPSILON_DECAY
     agent.alpha *= ALPHA_DECAY
     
-    total_avg_waiting_time = 0
-
-    print(f"Starting episode {ep}")
-    reward, step, sim_generating_end, arrived_vehicles_number, total_avg_waiting_time = run_episode(ep, total_avg_waiting_time=total_avg_waiting_time)
-
-    # save the Q-table after every nth episode
-    if (ep + 1) % NUM_ROUTE_VARIATIONS == 0 and (ep + 1) % 99 == 0:
-        with open(f"q-tables-and-logs/tables/qtable_ep{ep}.pkl", "wb") as f:
+    print(f"Početak epizode {ep}")
+    reward, steps, gen_end, arrived, avg_wait = run_episode(ep)
+    
+    # Čuvanje Q-tabele
+    if ep % 100 == 0 or ep == NUM_EPISODES:
+        table_path = f"q-tables-and-logs/tables/qtable_ep{ep}.pkl"
+        with open(table_path, "wb") as f:
             pickle.dump(agent.q_table, f)
-
-    if ep == NUM_EPISODES - 1:
-        with open("q-tables-and-logs/qtable_final.pkl", "wb") as f:
-            pickle.dump(agent.q_table, f)
-        if os.path.exists("evaluation-results"):
-            shutil.rmtree("evaluation-results")
-        os.makedirs("evaluation-results")
-        with open(
-            "evaluation-results/evaluation_results.csv", "w"
-        ) as eval_file:
-            eval_file.write("Fixed,Agent\n")
-
+        print(f"Sačuvana Q-tabela: {table_path}")
+    
+    # Logovanje rezultata
+    log_entry = f"{ep},{reward},{gen_end},{steps},{arrived},{avg_wait}\n"
     with open("q-tables-and-logs/log.csv", "a") as log_file:
         if ep == 1:
-            log_file.write("Episode,Total Reward,End of Generating Vehicles, End of Arriving, Number of Vehicles, Avg Waiting Time\n")
-        log_file.write(f"{ep},{reward},{sim_generating_end},{step},{arrived_vehicles_number},{total_avg_waiting_time}\n")
-
-    print(f"Episode {ep} total reward: {reward}\n")
-
-    print(agent.alpha, agent.gamma, agent.epsilon)
-    # change hyperparameters in config.py for the next training run
+            log_file.write("Episode,Total Reward,Gen End,Sim End,Arrived Vehicles,Avg Waiting\n")
+        log_file.write(log_entry)
+    
+    print(f"Epizoda {ep} završena: Nagrada={reward:.2f}, Vozila={arrived}, Čekanje={avg_wait:.2f}s")
+    
+    # Ažuriranje konfiguracije
     update_config(
-        last_alpha=agent.alpha, last_gamma=agent.gamma, last_epsilon=agent.epsilon
+        last_alpha=round(agent.alpha, 6),
+        last_gamma=round(agent.gamma, 6),
+        last_epsilon=round(agent.epsilon, 6),
+        episodes_done=ep
     )
 
-os.chdir("./q-tables-and-logs/")
-df = pd.read_csv("log.csv", header=0)
-
-# Extract columns
-x = df["Episode"]  # First column
-y = -df["Total Reward"]  # Negated second column
-
-# Smooth the data
-x = x[::80].rolling(window=10).mean().dropna()
-yy = y[::80].rolling(window=10).mean().dropna()
-y = y[::80].rolling(window=10).median().dropna()
-
-# Plot
-plt.plot(x, y, marker="o" , linestyle="-", color="blue", label="Median")
-plt.plot(x, yy, marker="o", linestyle="--", color="orange", label="Mean")
-plt.xlabel("Episode")
-plt.ylabel("Negative Total Reward")
-plt.title("Training Progress (Lower is Better)")
-plt.grid(True)
-plt.tight_layout()
-plt.legend()
-plt.savefig("training_progress.png")
-os.chdir("..")
+# Generisanje grafikona
+if os.path.exists("q-tables-and-logs/log.csv"):
+    os.chdir("q-tables-and-logs")
+    df = pd.read_csv("log.csv")
+    
+    plt.figure(figsize=(12, 6))
+    
+    # Grafikon nagrada
+    plt.subplot(1, 2, 1)
+    df['Smoothed Reward'] = df['Total Reward'].rolling(window=50).mean()
+    plt.plot(df['Episode'], df['Smoothed Reward'], 'b-')
+    plt.xlabel('Epizoda')
+    plt.ylabel('Prosečna nagrada')
+    plt.title('Tok treniranja')
+    plt.grid(True)
+    
+    # Grafikon vremena čekanja
+    plt.subplot(1, 2, 2)
+    df['Smoothed Waiting'] = df['Avg Waiting'].rolling(window=50).mean()
+    plt.plot(df['Episode'], df['Smoothed Waiting'], 'r-')
+    plt.xlabel('Epizoda')
+    plt.ylabel('Prosečno čekanje (s)')
+    plt.title('Vreme čekanja vozila')
+    plt.grid(True)
+    
+    plt.tight_layout()
+    plt.savefig("training_progress.png")
+    print("Grafikoni sačuvani kao training_progress.png")
+    os.chdir("..")
+else:
+    print("Log fajl nije pronađen, preskačem generisanje grafikona")

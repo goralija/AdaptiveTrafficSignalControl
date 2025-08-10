@@ -3,9 +3,9 @@ cycler==0.12.1
 fonttools==4.58.0
 kiwisolver==1.4.8
 matplotlib==3.10.3
-numpy==2.2.6
+numpy
 packaging==25.0
-pandas==2.2.3
+pandas
 pillow==11.2.1
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0

@@ -1,2 +1,2 @@
 # AdaptiveTrafficSignalControl
-- poboljsati hiperparametre i odraditi kvalitetno testiranje
+- napraviti da se simulacija prekida cim sva vozila stignu na svoje odrediste
