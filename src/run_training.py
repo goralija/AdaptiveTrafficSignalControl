@@ -85,11 +85,6 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
     # Inicijalizacija stanja
     lanes = traci.trafficlight.getControlledLanes(TL_ID)
     state = get_state(TL_ID)
-    
-    if step % 500 == 0 and step > 0:
-        print(f"Epizoda {episode}, Step {step}: "
-            f"Departed={current_departed}, Arrived={current_arrived}, "
-            f"Waiting={avg_waiting:.1f}s")
 
     while step < MAX_STEPS:
         traci.simulationStep()
@@ -98,13 +93,12 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
         current_departed = traci.simulation.getDepartedNumber()
         current_arrived = traci.simulation.getArrivedNumber()
         
-        # Provera završetka generisanja vozila
         if step >= sim_generating_end:
             departures_ended = True
-            
-        # Provera kraja simulacije
-        if departures_ended and current_departed > 0:
-            if arrived_vehicles+current_arrived >= 1.00 * departed_vehicles+current_departed:
+
+        # Provjera završetka simulacije
+        if departures_ended:
+            if arrived_vehicles+current_arrived >= departed_vehicles+current_departed:
                 break
 
         # Prikupljanje podataka o čekanju

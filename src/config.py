@@ -2,7 +2,7 @@
 TL_ID = "cluster_1955770138_39630061_6970320248_6970320249_#1more"
 
 # Vremenska ograničenja faza
-MIN_PHASE_DURATION = 15
+MIN_PHASE_DURATION = 20
 MAX_PHASE_DURATION = 110
 
 # Konfiguracija simulacije
@@ -11,14 +11,14 @@ SIMULATION_FOLDER = "../simulation-config/"
 NET_FILE = "osm.net.xml"
 ROU_FILE = "routes.rou.xml"
 SUMO_BINARY = "sumo"
-SUMO_BINARY_EVAL = "sumo-gui"
+SUMO_BINARY_EVAL = "sumo"
 
 # Parametri treniranja
 MAX_STEPS = 9200  # Povećano na 2 sata simulacije
 EPISODES_DONE = 0
-NUM_EPISODES = 500
-NUM_EVAL_EPISODES = 5
-NUM_ROUTE_VARIATIONS = 2
+NUM_EPISODES = 700
+NUM_EVAL_EPISODES = 35
+NUM_ROUTE_VARIATIONS = 3
 
 # Hiperparametri Q-učenja
 ALPHA = 0.1
@@ -37,17 +37,17 @@ LAST_EPSILON = EPSILON
 
 # Parametri generisanja ruta
 SIM_START_OF_GENERATING = 0
-SIM_GENERATING_RANGE_MIN = 1000
-SIM_GENERATING_RANGE_MAX = 1500  
-ROUTES_PER_SEC_RANGE_MIN = 2
-ROUTES_PER_SEC_RANGE_MAX = 3
+SIM_GENERATING_RANGE_MIN = 1400
+SIM_GENERATING_RANGE_MAX = 2200  
+ROUTES_PER_SEC_RANGE_MIN = 4
+ROUTES_PER_SEC_RANGE_MAX = 7
 ROUTES_PER_SEC_RANGE_RANDOMIZE = False
 
 # Konfiguracija nagrada (optimizovano)
 REWARD_CONFIG = {
     'queue_weight': 0.4,
-    'waiting_weight': 0.3,
-    'flow_weight': 0.3,
+    'waiting_weight': 0.4,
+    'flow_weight': 0.2,
     'queue_normalizer': 40,
     'waiting_normalizer': 80,
     'flow_normalizer': 10

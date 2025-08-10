@@ -57,6 +57,8 @@ def evaluate_simulation(use_agent=True, seed=None):
     cumulative_waiting = 0
     measurement_count = 0
     total_reward = 0
+    total_departed = 0
+    total_arrived = 0
     
     # Metrike za praćenje
     metrics = {
@@ -81,9 +83,10 @@ def evaluate_simulation(use_agent=True, seed=None):
             cumulative_waiting += sum(waiting_times)
             measurement_count += len(waiting_times)
         
-        # Provera kraja simulacije
-        if departed == arrived and departed > 0 and step >= sim_generating_end:
-            break
+        # Provjera kraja simulacije
+        if step > sim_generating_end:
+            if total_arrived+arrived >= total_departed+departed:
+                break
         
         # Ako koristimo agenta, odredi akciju
         if use_agent:
