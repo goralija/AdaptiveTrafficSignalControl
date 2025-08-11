@@ -14,11 +14,11 @@ SUMO_BINARY = "sumo"
 SUMO_BINARY_EVAL = "sumo"
 
 # Parametri treniranja
-MAX_STEPS = 9200  # Povećano na 2 sata simulacije
+MAX_STEPS = 10200  
 EPISODES_DONE = 0
-NUM_EPISODES = 700
+NUM_EPISODES = 200
 NUM_EVAL_EPISODES = 35
-NUM_ROUTE_VARIATIONS = 3
+NUM_ROUTE_VARIATIONS = 2
 
 # Hiperparametri Q-učenja
 ALPHA = 0.1
@@ -37,10 +37,10 @@ LAST_EPSILON = EPSILON
 
 # Parametri generisanja ruta
 SIM_START_OF_GENERATING = 0
-SIM_GENERATING_RANGE_MIN = 1400
-SIM_GENERATING_RANGE_MAX = 2200  
-ROUTES_PER_SEC_RANGE_MIN = 4
-ROUTES_PER_SEC_RANGE_MAX = 7
+SIM_GENERATING_RANGE_MIN = 1000
+SIM_GENERATING_RANGE_MAX = 1000  
+ROUTES_PER_SEC_RANGE_MIN = 10
+ROUTES_PER_SEC_RANGE_MAX = 11
 ROUTES_PER_SEC_RANGE_RANDOMIZE = False
 
 # Konfiguracija nagrada (optimizovano)
@@ -53,7 +53,7 @@ REWARD_CONFIG = {
     'flow_normalizer': 10
 }
 
-last_alpha = 0.095123
+last_alpha = 0.098020
 last_gamma = 0.950000
-last_epsilon = 0.040786
-episodes_done = 500
+last_epsilon = 0.183479
+episodes_done = 200

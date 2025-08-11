@@ -154,7 +154,7 @@ for ep in range(EPISODES_DONE + 1, NUM_EPISODES + 1):
     reward, steps, gen_end, arrived, avg_wait = run_episode(ep)
     
     # Čuvanje Q-tabele
-    if ep % 100 == 0 or ep == NUM_EPISODES:
+    if ep % 50 == 0 or ep == NUM_EPISODES:
         table_path = f"q-tables-and-logs/tables/qtable_ep{ep}.pkl"
         with open(table_path, "wb") as f:
             pickle.dump(agent.q_table, f)

@@ -121,7 +121,7 @@ def calculate_reward(tls_id, config):
 def generate_random_routes(seed=None):
     # Generisanje parametara
     sim_end = random.randint(SIM_GENERATING_RANGE_MIN, SIM_GENERATING_RANGE_MAX)
-    routes_per_sec = 0.1#random.uniform(ROUTES_PER_SEC_RANGE_MIN, ROUTES_PER_SEC_RANGE_MAX)
+    routes_per_sec = random.uniform(ROUTES_PER_SEC_RANGE_MIN, ROUTES_PER_SEC_RANGE_MAX)
     
     if ROUTES_PER_SEC_RANGE_RANDOMIZE:
         routes_per_sec = round(routes_per_sec * random.uniform(0.8, 1.2), 2)
