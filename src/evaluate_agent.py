@@ -22,14 +22,18 @@ from config import (
     SUMO_BINARY_EVAL,
     MAX_STEPS,
     NUM_EVAL_EPISODES,
-    REWARD_CONFIG
+    EVAL_Q_TABLE_PATH,
+    episodes_done
 )
 
 check_sumo_home()
 
+EVAL_RESULTS_DIR = os.path.join("evaluation-results", str(episodes_done+1))
+os.makedirs(EVAL_RESULTS_DIR, exist_ok=True)
+
 # Load learned Q-table
 try:
-    with open("q-tables-and-logs/qtable_final.pkl", "rb") as f:
+    with open(EVAL_Q_TABLE_PATH+str(episodes_done+1)+".pkl", "rb") as f:
         q_table = pickle.load(f)
     print("Uspješno učitana Q-tabela za evaluaciju!")
 except FileNotFoundError:
@@ -45,12 +49,12 @@ agent.epsilon = 0.0  # Onemogući istraživanje tokom evaluacije
 def evaluate_simulation(use_agent=True, seed=None):
     """Pokreće jednu simulaciju i prikuplja metriku performansi"""
     # Generiši rute sa zadatim seed-om
-    os.chdir(SIMULATION_FOLDER)
-    sim_generating_end = generate_random_routes(seed)
-    os.chdir("../src")
+    # os.chdir(SIMULATION_FOLDER)
+    # sim_generating_end = generate_random_routes(seed)
+    # os.chdir("../src")
     
     # Pokreni SUMO
-    traci.start([SUMO_BINARY_EVAL, "-c", CONFIG_FILE])
+    traci.start([SUMO_BINARY_EVAL, "-c", CONFIG_FILE, "--no-warnings", "--no-step-log"])
     
     step = 0
     last_action_time = 0
@@ -59,6 +63,8 @@ def evaluate_simulation(use_agent=True, seed=None):
     total_reward = 0
     total_departed = 0
     total_arrived = 0
+    cumulative_queue_length = 0
+    queue_measurement_count = 0
     
     # Metrike za praćenje
     metrics = {
@@ -87,26 +93,60 @@ def evaluate_simulation(use_agent=True, seed=None):
         if step > sim_generating_end:
             if total_arrived+arrived >= total_departed+departed:
                 break
+            
+        current_state = get_state(TL_ID)
+        total_queue = sum(current_state[2:])  # sve nakon faze i trajanja su redovi
+        cumulative_queue_length += total_queue
+        queue_measurement_count += 1
+
         
         # Ako koristimo agenta, odredi akciju
         if use_agent:
-            state = get_state(TL_ID)
-            
+            current_phase = traci.trafficlight.getPhase(TL_ID)
+            if current_phase == -1:
+                continue
+
+            current_state = get_state(TL_ID)
+                
             if step - last_action_time >= MIN_PHASE_DURATION:
                 if step - last_action_time >= MAX_PHASE_DURATION:
                     action = 1
                 else:
-                    action = agent.choose_action(state)
+                    action = agent.choose_action(current_state)
                 
                 if action == 1:
-                    current_phase = traci.trafficlight.getPhase(TL_ID)
+                    #current_phase = traci.trafficlight.getPhase(TL_ID)
                     new_phase = (current_phase + 1) % get_phase_count(TL_ID)
                     traci.trafficlight.setPhase(TL_ID, new_phase)
                     last_action_time = step
+                    #phase_options = list(range(get_phase_count()))
+                    #phase_options.remove(current_phase)  # Ukloni trenutnu fazu
+                    #
+                    ## Pronađi najbolju fazu na osnovu Q-vrijednosti
+                    #best_phase = current_phase
+                    #best_value = float('-inf')
+                    #
+                    #for phase in phase_options:
+                    #    # Hipotetičko stanje za ovu fazu
+                    #    hyp_state = (current_state[0], current_state[1], phase) + current_state[3:]
+                    #    state_value = max([agent.get_Q(hyp_state, a) for a in agent.actions])
+                    #    
+                    #    if state_value > best_value:
+                    #        best_value = state_value
+                    #        best_phase = phase
+                    #
+                    ## Primijeni promjenu
+                    #traci.trafficlight.setPhase(TL_ID, best_phase)
+                    #last_action_time = step
+            else:
+                action = 0
             
             # Izračunaj nagradu (samo za praćenje, ne za učenje)
-            reward = calculate_reward(TL_ID, REWARD_CONFIG)
-            total_reward += reward
+            reward = calculate_reward(current_state)
+            total_reward += reward        
+            
+        total_arrived += arrived
+        total_departed += departed
     
     # Prikupi finalne metrike
     metrics['total_steps'] = step
@@ -114,6 +154,8 @@ def evaluate_simulation(use_agent=True, seed=None):
     metrics['arrived'] = arrived
     metrics['avg_waiting'] = cumulative_waiting / measurement_count if measurement_count > 0 else 0
     metrics['total_reward'] = total_reward
+    metrics['avg_queue_length'] = cumulative_queue_length / queue_measurement_count if queue_measurement_count > 0 else 0
+
     
     traci.close()
     return metrics
@@ -121,7 +163,7 @@ def evaluate_simulation(use_agent=True, seed=None):
 def save_results(results, filename="evaluation_results.csv"):
     """Čuva rezultate evaluacije u CSV fajl"""
     os.makedirs("evaluation-results", exist_ok=True)
-    path = os.path.join("evaluation-results", filename)
+    path = os.path.join(EVAL_RESULTS_DIR, filename)
     
     df = pd.DataFrame(results)
     df.to_csv(path, index=False)
@@ -172,8 +214,22 @@ def plot_results(df):
     plt.axhline(y=0, color='k', linestyle='-')
     
     plt.tight_layout()
-    plt.savefig("evaluation-results/evaluation_comparison.png")
-    print("Grafikoni sačuvani kao evaluation_comparison.png")
+    plt.savefig(os.path.join(EVAL_RESULTS_DIR, "evaluation_comparison.png"))
+    print(f"Grafikoni sačuvani kao {os.path.join(EVAL_RESULTS_DIR, 'evaluation_comparison.png')}")
+
+def plot_queue_lengths(df):
+    plt.figure(figsize=(8, 6))
+    plt.bar(df['run'] - 0.2, df['fixed_avg_queue'], width=0.4, label='Fiksni ciklusi', alpha=0.7, color='red')
+    plt.bar(df['run'] + 0.2, df['agent_avg_queue'], width=0.4, label='Agent', alpha=0.7, color='blue')
+    plt.xlabel('Pokretanje')
+    plt.ylabel('Prosječna dužina reda (vozila)')
+    plt.title('Upoređenje prosječne dužine redova čekanja')
+    plt.legend()
+    plt.grid(True)
+    file_path = os.path.join(EVAL_RESULTS_DIR, "queue_length_comparison.png")
+    plt.savefig(file_path)
+    plt.close()
+    print(f"Grafik reda čekanja sačuvan kao {file_path}")
 
 if __name__ == "__main__":
     results = []
@@ -183,7 +239,11 @@ if __name__ == "__main__":
         print(f"Evaluacijsko pokretanje {i}/{NUM_EVAL_EPISODES}")
         
         # Generiši jedinstveni seed za obe varijante
-        seed = random.randint(1, 10000) % NUM_ROUTE_VARIATIONS
+        seed = i % NUM_ROUTE_VARIATIONS
+        
+        os.chdir(SIMULATION_FOLDER)
+        sim_generating_end = generate_random_routes(seed)
+        os.chdir("../src")
         
         # Pokreni sa fiksnim vremenima semafora
         print("Pokrećem simulaciju sa FIKSNIM vremenima semafora...")
@@ -205,12 +265,15 @@ if __name__ == "__main__":
             'agent_avg_waiting': agent_metrics['avg_waiting'],
             'agent_reward': agent_metrics['total_reward'],
             'improvement_steps': fixed_metrics['total_steps'] - agent_metrics['total_steps'],
-            'improvement_waiting': fixed_metrics['avg_waiting'] - agent_metrics['avg_waiting']
+            'improvement_waiting': fixed_metrics['avg_waiting'] - agent_metrics['avg_waiting'],
+            'fixed_avg_queue': fixed_metrics['avg_queue_length'],
+            'agent_avg_queue': agent_metrics['avg_queue_length'],
         })
     
     # Sačuvaj i prikaži rezultate
     df = save_results(results)
     plot_results(df)
+    plot_queue_lengths(df)
     
     # Prikaz ukupnog poboljšanja
     avg_step_improvement = df['improvement_steps'].mean()

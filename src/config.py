@@ -2,7 +2,7 @@
 TL_ID = "cluster_1955770138_39630061_6970320248_6970320249_#1more"
 
 # Vremenska ograničenja faza
-MIN_PHASE_DURATION = 20
+MIN_PHASE_DURATION = 5
 MAX_PHASE_DURATION = 110
 
 # Konfiguracija simulacije
@@ -14,46 +14,32 @@ SUMO_BINARY = "sumo"
 SUMO_BINARY_EVAL = "sumo"
 
 # Parametri treniranja
-MAX_STEPS = 10200  
-EPISODES_DONE = 0
-NUM_EPISODES = 200
-NUM_EVAL_EPISODES = 35
-NUM_ROUTE_VARIATIONS = 2
+MAX_STEPS = 22222  
+EPISODES_DONE = 1500
+NUM_EPISODES = 2500
+NUM_EVAL_EPISODES = 50
+NUM_ROUTE_VARIATIONS = 7
 
 # Hiperparametri Q-učenja
-ALPHA = 0.1
+ALPHA = 0.187
 GAMMA = 0.95
-EPSILON = 0.5
-ALPHA_DECAY = 0.9999
-EPSILON_DECAY = 0.995
+EPSILON = 1.0
+ALPHA_DECAY = 0.9996
+EPSILON_DECAY = 0.997
 
 # Putanje za čuvanje modela
 Q_TABLE_PATH = "./q-tables-and-logs/qtable_final.pkl"
-
-# Posljednje korištene vrijednosti (ažuriraju se automatski)
-LAST_ALPHA = ALPHA
-LAST_GAMMA = GAMMA
-LAST_EPSILON = EPSILON
+EVAL_Q_TABLE_PATH = "q-tables-and-logs/tables/qtable_ep"
 
 # Parametri generisanja ruta
 SIM_START_OF_GENERATING = 0
-SIM_GENERATING_RANGE_MIN = 1000
-SIM_GENERATING_RANGE_MAX = 1000  
-ROUTES_PER_SEC_RANGE_MIN = 10
-ROUTES_PER_SEC_RANGE_MAX = 11
+SIM_GENERATING_RANGE_MIN = 800
+SIM_GENERATING_RANGE_MAX = 1100  
+ROUTES_PER_SEC_RANGE_MIN = 0.7
+ROUTES_PER_SEC_RANGE_MAX = 1.1
 ROUTES_PER_SEC_RANGE_RANDOMIZE = False
 
-# Konfiguracija nagrada (optimizovano)
-REWARD_CONFIG = {
-    'queue_weight': 0.4,
-    'waiting_weight': 0.4,
-    'flow_weight': 0.2,
-    'queue_normalizer': 40,
-    'waiting_normalizer': 80,
-    'flow_normalizer': 10
-}
-
-last_alpha = 0.098020
+last_alpha = 0.060156
 last_gamma = 0.950000
-last_epsilon = 0.183479
-episodes_done = 200
+last_epsilon = 0.001538
+episodes_done = 2199

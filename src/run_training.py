@@ -15,6 +15,9 @@ from utils import (
     calculate_reward  # Dodata nova funkcija za nagradu
 )
 from config import (
+    ALPHA,
+    EPSILON,
+    GAMMA,
     ALPHA_DECAY,
     EPISODES_DONE,
     EPSILON_DECAY,
@@ -27,11 +30,11 @@ from config import (
     MAX_STEPS,
     NUM_EPISODES,
     Q_TABLE_PATH,
-    LAST_ALPHA,
-    LAST_GAMMA,
-    LAST_EPSILON,
     SIMULATION_FOLDER,
-    REWARD_CONFIG  # Novi konfig objekat
+    last_alpha,
+    last_gamma,
+    last_epsilon,
+    episodes_done
 )
 
 check_sumo_home()
@@ -48,11 +51,11 @@ if os.path.exists(Q_TABLE_PATH):
         loaded_q_table = pickle.load(f)
     print("Učitana postojeća Q-tabela!")
     agent = QLearningAgent(
-        actions=[0, 1], alpha=LAST_ALPHA, gamma=LAST_GAMMA, epsilon=LAST_EPSILON
+        actions=[0, 1], alpha=last_alpha, gamma=last_gamma, epsilon=last_epsilon
     )
     agent.q_table = loaded_q_table
 else:
-    agent = QLearningAgent(actions=[0, 1])
+    agent = QLearningAgent(actions=[0, 1], alpha=ALPHA, gamma=GAMMA, epsilon=EPSILON)
     print("Nema postojeće Q-tabele, kreiran novi agent!")
     try:
         if os.path.exists("q-tables-and-logs"):
@@ -72,7 +75,7 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
     sim_generating_end = generate_random_routes(seed)
     os.chdir("../src")
     
-    traci.start([SUMO_BINARY, "-c", CONFIG_FILE])
+    traci.start([SUMO_BINARY, "-c", CONFIG_FILE, "--no-warnings", "--no-step-log"])
     step = 0
     last_action_time = 0
     total_reward = 0
@@ -81,6 +84,7 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
     departures_ended = False
     cumulative_waiting = 0
     measurement_count = 0
+    last_phase_change_time = 0
     
     # Inicijalizacija stanja
     lanes = traci.trafficlight.getControlledLanes(TL_ID)
@@ -111,28 +115,50 @@ def run_episode(episode, sim_folder=SIMULATION_FOLDER):
         current_phase = traci.trafficlight.getPhase(TL_ID)
         if current_phase == -1:
             continue
+        
+        current_state = get_state(TL_ID)
 
         if step - last_action_time >= MIN_PHASE_DURATION:
             if step - last_action_time >= MAX_PHASE_DURATION:
                 action = 1
             else:
-                action = agent.choose_action(state)
+                action = agent.choose_action(current_state)
                 
             if action == 1:
                 new_phase = (current_phase + 1) % get_phase_count()
                 traci.trafficlight.setPhase(TL_ID, new_phase)
                 last_action_time = step
+                # Optimizovana promjena faze - KORIGOVANO
+                #phase_options = list(range(get_phase_count()))
+                #phase_options.remove(current_phase)  # Ukloni trenutnu fazu
+                #
+                ## Pronađi najbolju fazu na osnovu Q-vrijednosti
+                #best_phase = current_phase
+                #best_value = float('-inf')
+                #
+                #for phase in phase_options:
+                #    # Hipotetičko stanje za ovu fazu
+                #    hyp_state = (current_state[0], current_state[1], phase) + current_state[3:]
+                #    state_value = max([agent.get_Q(hyp_state, a) for a in agent.actions])
+                #    
+                #    if state_value > best_value:
+                #        best_value = state_value
+                #        best_phase = phase
+                #
+                ## Primijeni promjenu
+                #traci.trafficlight.setPhase(TL_ID, best_phase)
+                #last_action_time = step
         else:
             action = 0
 
         # Izračun nagrade
-        reward = calculate_reward(TL_ID, REWARD_CONFIG)
+        reward = calculate_reward(current_state)
         total_reward += reward
 
         # Učenje agenta
         next_state = get_state(TL_ID)
-        agent.learn(state, action, reward, next_state)
-        state = next_state
+        agent.learn(current_state, action, reward, next_state)
+        #state = next_state
         
         # update pokrenutih i pristiglih vozila
         departed_vehicles += current_departed
@@ -154,11 +180,15 @@ for ep in range(EPISODES_DONE + 1, NUM_EPISODES + 1):
     reward, steps, gen_end, arrived, avg_wait = run_episode(ep)
     
     # Čuvanje Q-tabele
-    if ep % 50 == 0 or ep == NUM_EPISODES:
+    if ep % 40 == 0 or ep == NUM_EPISODES:
         table_path = f"q-tables-and-logs/tables/qtable_ep{ep}.pkl"
         with open(table_path, "wb") as f:
             pickle.dump(agent.q_table, f)
         print(f"Sačuvana Q-tabela: {table_path}")
+        
+        # Pokreni evaluaciju
+        print(f"Pokrećem evaluaciju nakon {ep} epizoda...")
+        os.system(f"{sys.executable} evaluate_agent.py")
     
     # Logovanje rezultata
     log_entry = f"{ep},{reward},{gen_end},{steps},{arrived},{avg_wait}\n"

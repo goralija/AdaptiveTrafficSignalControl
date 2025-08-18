@@ -6,7 +6,6 @@ import subprocess
 import numpy as np
 from config import (
     TL_ID,
-    REWARD_CONFIG,
     SIM_START_OF_GENERATING,
     SIM_GENERATING_RANGE_MIN,
     SIM_GENERATING_RANGE_MAX,
@@ -24,9 +23,22 @@ class QLearningAgent:
         self.gamma = gamma
         self.epsilon = epsilon
         self.actions = actions
+        
+    def get_state_key(self, state):
+        """Optimizovana diskretizacija za velike protoke"""
+        phase, duration, *queues = state
+        
+        MAX_QUEUE = 60 
+        QUEUE_STEP = 5  
+        
+        queue_bins = [min(q, MAX_QUEUE) // QUEUE_STEP for q in queues]
+        duration_bin = min(int(duration / 10), 10)
+    
+        return (phase, duration_bin) + tuple(queue_bins)
 
     def get_Q(self, state, action):
-        return self.q_table.get((state, action), 0.0)
+        key = (self.get_state_key(state), action)
+        return self.q_table.get(key, 0.0)
 
     def choose_action(self, state):
         if random.random() < self.epsilon:
@@ -40,12 +52,15 @@ class QLearningAgent:
         return self.actions[random.choice(max_indices)]
 
     def learn(self, state, action, reward, next_state):
+        current_key = (self.get_state_key(state), action)
         current_q = self.get_Q(state, action)
+        
+        # Max Q za sledeće stanje
         next_max_q = max([self.get_Q(next_state, a) for a in self.actions])
         
-        # Q-learning formulu
+        # Q-learning update
         new_q = current_q + self.alpha * (reward + self.gamma * next_max_q - current_q)
-        self.q_table[(state, action)] = new_q
+        self.q_table[current_key] = new_q
 
 def check_sumo_home():
     if "SUMO_HOME" in os.environ:
@@ -55,68 +70,52 @@ def check_sumo_home():
     else:
         raise EnvironmentError("SUMO_HOME nije postavljen!")
 
-def get_state(tls_id=TL_ID):
+def get_state(tls_id=TL_ID, conn=None):
+    if conn is None:
+        conn = traci
+        
     try:
-        lanes = traci.trafficlight.getControlledLanes(tls_id)
-        queue_lengths = [traci.lane.getLastStepVehicleNumber(lane) for lane in lanes]
-        total_vehicles = sum(queue_lengths)
-        max_queue = max(queue_lengths) if lanes else 0
+        current_phase = conn.trafficlight.getPhase(tls_id)
+        phase_duration = conn.trafficlight.getPhaseDuration(tls_id)
         
-        # Prosečno vreme čekanja
-        waiting_times = []
-        for lane in lanes:
-            for veh_id in traci.lane.getLastStepVehicleIDs(lane):
-                waiting_times.append(traci.vehicle.getWaitingTime(veh_id))
+        approaches = {}
+        lane_counts = {}  # broj traka po prilazu
         
-        avg_waiting = np.mean(waiting_times) if waiting_times else 0
+        for lane in conn.trafficlight.getControlledLanes(tls_id):
+            edge_id = lane.split('_')[0]
+            if edge_id not in approaches:
+                approaches[edge_id] = 0
+                lane_counts[edge_id] = 0
+            approaches[edge_id] += conn.lane.getLastStepVehicleNumber(lane)
+            lane_counts[edge_id] += 1
         
-        # Trenutna faza i trajanje
-        current_phase = traci.trafficlight.getPhase(tls_id)
-        phase_duration = traci.trafficlight.getPhaseDuration(tls_id)
+        # Pretvori u prosjek po traci u tom smjeru
+        for edge_id in approaches:
+            approaches[edge_id] /= lane_counts[edge_id]
         
-        # Diskretizacija stanja (optimizovano)
-        state_components = (
-            min(total_vehicles // 5, 7),        # 0-7 (do 35 vozila)
-            min(max_queue // 3, 7),              # 0-7 (do 21 vozila po traci)
-            min(int(avg_waiting) // 10, 7),      # 0-7 (do 70 sekundi)
-            current_phase,
-            min(phase_duration // 10, 5)        # 0-5 (do 50 sekundi)
-        )
+        sorted_approaches = sorted(approaches.items())
+        queue_lengths = [q for _, q in sorted_approaches]
         
-        return state_components
+        return (current_phase, phase_duration) + tuple(queue_lengths)
         
-    except traci.TraCIException:
-        return (0, 0, 0, 0, 0)
+    except Exception as e:
+        print(f"Greška u get_state: {e}")
+        return (0, 0, 0, 0, 0, 0)
 
-def calculate_reward(tls_id, config):
-    try:
-        lanes = traci.trafficlight.getControlledLanes(tls_id)
+
+def calculate_reward(state):
+    phase, duration, *queues = state
+    
+    # Penalizacija po prosječnom redu (kvadratna)
+    queue_penalty = sum(q**2 for q in queues) / len(queues)  # normalizacija
+    
+    # Kazna za preduge faze (kada ima gužvi)
+    if max(queues) > 20 and duration > 60:
+        duration_penalty = (duration - 60) * 1.2
+    else:
+        duration_penalty = 0
         
-        # Kazna za gužvu
-        queue_lengths = [traci.lane.getLastStepVehicleNumber(lane) for lane in lanes]
-        queue_penalty = sum(queue_lengths) / config['queue_normalizer']
-        
-        # Kazna za čekanje
-        waiting_times = []
-        for lane in lanes:
-            for veh_id in traci.lane.getLastStepVehicleIDs(lane):
-                waiting_times.append(traci.vehicle.getWaitingTime(veh_id))
-        
-        avg_waiting = np.mean(waiting_times) if waiting_times else 0
-        waiting_penalty = avg_waiting / config['waiting_normalizer']
-        
-        flow_reward = traci.simulation.getArrivedNumber() / config['flow_normalizer']
-        
-        # Kombinovana nagrada
-        reward = -(
-            config['queue_weight'] * queue_penalty +
-            config['waiting_weight'] * waiting_penalty
-        ) + config['flow_weight'] * flow_reward
-        
-        return reward
-        
-    except traci.TraCIException:
-        return 0
+    return -(queue_penalty + duration_penalty)
 
 def generate_random_routes(seed=None):
     # Generisanje parametara
@@ -125,7 +124,7 @@ def generate_random_routes(seed=None):
     
     if ROUTES_PER_SEC_RANGE_RANDOMIZE:
         routes_per_sec = round(routes_per_sec * random.uniform(0.8, 1.2), 2)
-    
+        
     # Komanda za generisanje ruta
     command = [
         "python", f"{os.environ['SUMO_HOME']}/tools/randomTrips.py",
@@ -134,7 +133,7 @@ def generate_random_routes(seed=None):
         "-b", str(SIM_START_OF_GENERATING),
         "-e", str(sim_end),
         "-p", str(1/routes_per_sec),
-        "--validate"
+        "--validate",
     ]
     
     if seed is not None:

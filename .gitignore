@@ -25,3 +25,6 @@ src/q-tables-and-logs/
 */*.xml
 !*/*.view.xml
 staro/
+training-evaluation-results/
+evaluation-results*
+aggregated_results.csv
