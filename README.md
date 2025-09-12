@@ -50,10 +50,10 @@ Korištenjem **reinforcement learninga (pojačanog učenja)** moguće je razviti
 │ └── osm_bbox.osm.xml.gz # OSM ulazni fajl za simulaciju
 │
 └── src/ # Python kod
-├── config.py # Konfiguracija hiperparametara i simulacije
-├── evaluate_agent.py # Evaluacija naučenog modela
-├── run_training.py # Glavna skripta za trening
-└── utils.py # Pomoćne funkcije
+  ├── config.py # Konfiguracija hiperparametara i simulacije
+  ├── evaluate_agent.py # Evaluacija naučenog modela
+  ├── run_training.py # Glavna skripta za trening
+  └── utils.py # Pomoćne funkcije
 ```
 
 ---
